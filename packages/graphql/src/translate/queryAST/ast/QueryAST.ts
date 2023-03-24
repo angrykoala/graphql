@@ -1,8 +1,6 @@
 import Cypher from "@neo4j/cypher-builder";
 import type { ConcreteEntity } from "../../../schema-model/entity/ConcreteEntity";
 import { createNodeFromEntity, getOrThrow } from "../utils";
-import type { FilterAST } from "./filter/FilterAST";
-import type { ProjectionAST } from "./projection/Projection";
 import { QueryASTNode } from "./QueryASTNode";
 
 export class QueryAST {
@@ -11,14 +9,6 @@ export class QueryAST {
 
     constructor(entity: ConcreteEntity) {
         this.entity = entity;
-    }
-
-    public addFilter(filter: FilterAST): void {
-        this.filters.push(filter);
-    }
-
-    public addProjection(projection: ProjectionAST) {
-        this.projection = projection;
     }
 
     public transpile(varName?: string): Cypher.Clause {
