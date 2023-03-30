@@ -1,4 +1,5 @@
 import Cypher from "@neo4j/cypher-builder";
+import { filterTruthy } from "../../../../utils/utils";
 import type { LogicalOperators } from "../../operators";
 import { QueryASTNode } from "../QueryASTNode";
 import type { Filter } from "./Filter";
@@ -10,21 +11,17 @@ export class LogicalFilter extends QueryASTNode {
     constructor({ operation, filters }: { operation: LogicalOperators; filters: Filter[] }) {
         super();
         this.operation = operation;
-        if (operation === "NOT" && filters.length > 1) {
-            throw new Error("Cannot have NOT operator with multiple filters");
-        }
         this.children = filters;
     }
 
     // VisitPredicate
     public getPredicate(node: Cypher.Node | Cypher.Relationship | any): Cypher.Predicate | undefined {
-        const predicates = this.children.map((f) => f.getPredicate(node)); // TODO: fix relationship vs node predicates
+        const predicates = filterTruthy(this.children.map((f) => f.getPredicate(node))); // TODO: fix relationship vs node predicates
 
         switch (this.operation) {
             case "NOT": {
-                const predicate = predicates[0];
-                if (!predicate) return undefined;
-                return Cypher.not(predicate);
+                if (predicates.length === 0) return undefined;
+                return Cypher.not(Cypher.and(...predicates));
             }
             case "AND": {
                 return Cypher.and(...predicates);

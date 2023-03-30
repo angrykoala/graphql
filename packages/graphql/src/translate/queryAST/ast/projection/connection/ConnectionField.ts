@@ -80,7 +80,7 @@ export class ConnectionField extends QueryASTNode {
         const nodePredicates = filterTruthy(this.targetNodeFilters.map((c) => c.getPredicate(relatedNode)));
         const relPredicates = filterTruthy(this.relationshipFilters.map((c) => c.getPredicate(relationshipVar)));
 
-        const andPredicate = Cypher.and(...nodePredicates, ...relPredicates);
+        const andPredicate = Cypher.and(...relPredicates, ...nodePredicates);
         if (andPredicate) {
             match.where(andPredicate);
         }

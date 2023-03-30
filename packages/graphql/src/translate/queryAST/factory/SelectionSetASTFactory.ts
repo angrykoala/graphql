@@ -1,7 +1,7 @@
 import type { ResolveTree } from "graphql-parse-resolve-info";
 import type { ConcreteEntity } from "../../../schema-model/entity/ConcreteEntity";
 import type { Relationship } from "../../../schema-model/relationship/Relationship";
-import { ConnectionWhereArg } from "../../../types";
+import type { ConnectionWhereArg } from "../../../types";
 import { filterTruthy } from "../../../utils/utils";
 import { AttributeField } from "../ast/projection/AttributeField";
 import { ConnectionField } from "../ast/projection/connection/ConnectionField";
