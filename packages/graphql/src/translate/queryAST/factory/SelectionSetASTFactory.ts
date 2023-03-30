@@ -118,14 +118,11 @@ export class SelectionSetASTFactory {
             where: connectionWhere,
             relationship,
         });
-        // TODO: edge filters
 
-        // const relatedNodeFilters = connectionWhere.node
-        //     ? this.createFilterASTs(connectionWhere.node, childEntity)
-        //     : undefined;
-        // const edgeFilter = connectionWhere.edge
-        //     ? this.createEdgeFilterAST(connectionWhere.edge, relationship)
-        //     : undefined;
+        const edgeFilters = this.filterFactory.createConnectionEdgeFilters({
+            where: connectionWhere,
+            relationship,
+        });
 
         return new ConnectionField({
             relationship,
@@ -134,6 +131,7 @@ export class SelectionSetASTFactory {
             nodeSelectionSet: filterTruthy(nodeFieldsAST),
             edgeSelectionSet: edgeFieldsAST,
             targetNodeFilters: nodeFilters,
+            targetEdgeFilters: edgeFilters,
             // nodeFilter: relatedNodeFilters,
             // relationshipFilter: edgeFilter,
         });

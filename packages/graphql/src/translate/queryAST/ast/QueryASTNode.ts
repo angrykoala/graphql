@@ -3,7 +3,7 @@ import type Cypher from "@neo4j/cypher-builder";
 export type ProjectionField = string | Record<string, Cypher.Expr>;
 
 export abstract class QueryASTNode {
-    public getPredicate(node: Cypher.Node): Cypher.Predicate | undefined {
+    public getPredicate(variable: Cypher.Variable): Cypher.Predicate | undefined {
         return undefined;
     }
 
