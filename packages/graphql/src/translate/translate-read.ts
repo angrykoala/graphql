@@ -21,6 +21,7 @@ import type { Node } from "../classes";
 import type { Context } from "../types";
 
 import type Cypher from "@neo4j/cypher-builder";
+import { QueryASTFactory } from "./queryAST/factory/QueryASTFactory";
 
 function testQueryAST({ context, node }: { context: Context; node: Node }): Cypher.CypherResult {
     const { resolveTree } = context;

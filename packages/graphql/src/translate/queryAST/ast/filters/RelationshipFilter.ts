@@ -1,15 +1,15 @@
 import Cypher from "@neo4j/cypher-builder";
-import type { Relationship } from "../../../../../schema-model/relationship/Relationship";
-import type { WhereOperator } from "../../factory/parse-operation";
-import { directionToCypher } from "../../../utils";
-import { FilterAST } from "./FilterAST";
-import type { PropertyFilterAST } from "./PropertyFilterAST";
+import type { ConcreteEntity } from "../../../../schema-model/entity/ConcreteEntity";
+import type { Relationship } from "../../../../schema-model/relationship/Relationship";
+import type { RelationshipWhereOperator } from "../../../where/types";
+import { directionToCypher } from "../../utils";
+import { QueryASTNode } from "../QueryASTNode";
+import type { Filter } from "./Filter";
 
-export class RelationshipFilterAST extends FilterAST {
-    private relationshipFilters: PropertyFilterAST[] = [];
-    private targetNodeFilters: FilterAST[] = [];
+export class RelationshipFilter extends QueryASTNode {
+    private targetNodeFilters: Filter[] = [];
     private relationship: Relationship;
-    private operator: WhereOperator | undefined;
+    private operator: RelationshipWhereOperator;
     private isNot: boolean;
 
     constructor({
@@ -18,26 +18,22 @@ export class RelationshipFilterAST extends FilterAST {
         isNot,
     }: {
         relationship: Relationship;
-        operator: WhereOperator | undefined;
+        operator: RelationshipWhereOperator | undefined;
         isNot: boolean;
     }) {
         super();
         this.relationship = relationship;
         this.isNot = isNot;
-        this.operator = operator;
+        this.operator = operator || "SOME";
     }
 
-    public addRelationshipFilter(filter: PropertyFilterAST): void {
-        this.relationshipFilters.push(filter);
+    public addTargetNodeFilter(...filter: Filter[]): void {
+        this.targetNodeFilters.push(...filter);
     }
 
-    public addTargetNodeFilter(filter: FilterAST): void {
-        this.targetNodeFilters.push(filter);
-    }
-    // TODO: maybe this should be a more generic relationship node with a filter child
     public getPredicate(parentNode: Cypher.Node): Cypher.Predicate | undefined {
-        // TODO: Make related pattern an util
-        const relatedEntity = this.relationship.target;
+        //TODO: not concrete entities
+        const relatedEntity = this.relationship.target as ConcreteEntity;
         const relatedNode = new Cypher.Node({
             labels: relatedEntity.labels,
         });

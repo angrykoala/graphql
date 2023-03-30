@@ -1,6 +1,6 @@
 import Cypher from "@neo4j/cypher-builder";
-import type { ConcreteEntity } from "../../../schema-model/entity/ConcreteEntity";
-import { createNodeFromEntity, getOrThrow } from "../utils";
+import type { ConcreteEntity } from "../../../../schema-model/entity/ConcreteEntity";
+import { createNodeFromEntity, getOrThrow } from "../../utils";
 import type { FilterAST } from "./filter/FilterAST";
 import type { ProjectionAST } from "./projection/Projection";
 

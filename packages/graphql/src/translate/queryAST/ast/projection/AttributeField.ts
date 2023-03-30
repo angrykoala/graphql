@@ -1,11 +1,11 @@
 import Cypher from "@neo4j/cypher-builder";
-import type { Attribute } from "../../../../../schema-model/attribute/Attribute";
-import { AttributeType } from "../../../../../schema-model/attribute/Attribute";
-import type { ProjectionField } from "../../QueryASTNode";
-import { QueryASTNode } from "../../QueryASTNode";
-import { getPropertyFromAttribute } from "../../../utils";
+import type { Attribute } from "../../../../schema-model/attribute/Attribute";
+import { AttributeType } from "../../../../schema-model/attribute/Attribute";
+import type { ProjectionField } from "../../types";
+import { getPropertyFromAttribute } from "../../utils";
+import { QueryASTNode } from "../QueryASTNode";
 
-export class ProjectionFieldAST extends QueryASTNode {
+export class AttributeField extends QueryASTNode {
     private attribute: Attribute;
     private alias: string;
 
@@ -24,7 +24,7 @@ export class ProjectionFieldAST extends QueryASTNode {
             const nodeProperty = getPropertyFromAttribute(variable, this.attribute);
             return [{ [this.alias]: nodeProperty }];
         }
-        return [`.${this.attribute.name}`];
+        return [this.attribute.name];
     }
 
     private hasAlias(): boolean {

@@ -1,10 +1,10 @@
 import type { ResolveTree } from "graphql-parse-resolve-info";
-import { ConcreteEntity } from "../../../schema-model/entity/ConcreteEntity";
-import type { Entity } from "../../../schema-model/entity/Entity";
-import type { Neo4jGraphQLSchemaModel } from "../../../schema-model/Neo4jGraphQLSchemaModel";
-import type { Relationship } from "../../../schema-model/relationship/Relationship";
-import type { ConnectionWhereArg, GraphQLWhereArg } from "../../../types";
-import { asArray } from "../../../utils/utils";
+import { ConcreteEntity } from "../../../../schema-model/entity/ConcreteEntity";
+import type { Entity } from "../../../../schema-model/entity/Entity";
+import type { Neo4jGraphQLSchemaModel } from "../../../../schema-model/Neo4jGraphQLSchemaModel";
+import type { Relationship } from "../../../../schema-model/relationship/Relationship";
+import type { ConnectionWhereArg, GraphQLWhereArg } from "../../../../types";
+import { asArray } from "../../../../utils/utils";
 import type { FilterAST } from "../ast/filter/FilterAST";
 import { LogicalFilterAST } from "../ast/filter/LogicalFilter";
 import { PropertyFilterAST } from "../ast/filter/PropertyFilterAST";
@@ -14,8 +14,6 @@ import { ProjectionAST } from "../ast/projection/Projection";
 import { ProjectionFieldAST } from "../ast/projection/ProjectionField";
 import { RelationshipProjectionFieldAST } from "../ast/projection/RelationshipProjectionField";
 import { QueryAST } from "../ast/QueryAST";
-import type { WhereOperator } from "./parse-operation";
-import { parseProjectionField } from "./parse-operation";
 import { parseWhereField } from "./parse-operation";
 
 export class QueryASTFactory {
@@ -296,7 +294,7 @@ export class QueryASTFactory {
         const resolveTreeFields = { ...resolveTree.fieldsByTypeName[childEntity.name] };
 
         const projectionFields = Object.entries(resolveTreeFields).map(([_, value]) => {
-            return this.createProjectionColumnAST(value, childEntity);
+            return this.createProjectionColumnAST(value, childEntity as any);
         });
         return new RelationshipProjectionFieldAST({
             relationship,

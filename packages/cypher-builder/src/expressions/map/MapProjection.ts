@@ -21,11 +21,8 @@ import type { CypherEnvironment } from "../../Environment";
 import type { CypherCompilable, Expr } from "../../types";
 import type { Variable } from "../../references/Variable";
 import { serializeMap } from "../../utils/serialize-map";
-<<<<<<< HEAD
 import { isString } from "../../utils/is-string";
-=======
 import { MapExpr } from "./MapExpr";
->>>>>>> origin/cypher-builder-map-projection
 
 /** Represents a Map projection
  * @see [Cypher Documentation](https://neo4j.com/docs/cypher-manual/current/syntax/maps/#cypher-map-projection)

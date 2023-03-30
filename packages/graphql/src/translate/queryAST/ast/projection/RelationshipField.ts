@@ -1,17 +1,16 @@
 import Cypher from "@neo4j/cypher-builder";
-import type { Relationship } from "../../../../../schema-model/relationship/Relationship";
-import { QueryASTNode } from "../../QueryASTNode";
-import { directionToCypher } from "../../../utils";
-import type { ConnectionProjectionFieldAST } from "./ConnectionProjection";
-import type { ProjectionFieldAST } from "./ProjectionField";
+import type { ConcreteEntity } from "../../../../schema-model/entity/ConcreteEntity";
+import type { Relationship } from "../../../../schema-model/relationship/Relationship";
+import type { ProjectionField } from "../../types";
+import { directionToCypher } from "../../utils";
+import { QueryASTNode } from "../QueryASTNode";
+import type { SelectionSetField } from "./SelectionSetField";
 
-type ProjectionField = string | Record<string, Cypher.Expr>;
-
-export class RelationshipProjectionFieldAST extends QueryASTNode {
+export class RelationshipField extends QueryASTNode {
     private relationship: Relationship;
     private alias: string;
     private directed: boolean;
-    private projectionFields: Array<ProjectionFieldAST | RelationshipProjectionFieldAST | ConnectionProjectionFieldAST>;
+    private selectionSet: SelectionSetField[] = [];
 
     private projectionVariable = new Cypher.Variable();
 
@@ -19,18 +18,18 @@ export class RelationshipProjectionFieldAST extends QueryASTNode {
         relationship,
         alias,
         directed,
-        projectionFields,
+        selectionSetFields,
     }: {
         relationship: Relationship;
         alias: string;
         directed: boolean;
-        projectionFields: Array<ProjectionFieldAST | RelationshipProjectionFieldAST | ConnectionProjectionFieldAST>;
+        selectionSetFields: Array<SelectionSetField>;
     }) {
         super();
         this.relationship = relationship;
         this.alias = alias;
         this.directed = directed;
-        this.projectionFields = projectionFields;
+        this.selectionSet = selectionSetFields;
     }
 
     public getProjectionFields(_variable: Cypher.Variable): ProjectionField[] {
@@ -38,7 +37,7 @@ export class RelationshipProjectionFieldAST extends QueryASTNode {
     }
 
     public getSubqueries(parentNode: Cypher.Node): Cypher.Clause[] {
-        const relatedEntity = this.relationship.target;
+        const relatedEntity = this.relationship.target as ConcreteEntity; // TODO: normal entities
         const relatedNode = new Cypher.Node({
             labels: relatedEntity.labels,
         });
@@ -57,7 +56,7 @@ export class RelationshipProjectionFieldAST extends QueryASTNode {
 
         const match = new Cypher.Match(pattern);
         // get subqueries
-        const projectionFields = this.projectionFields.flatMap((field) => field.getProjectionFields(relatedNode));
+        const projectionFields = this.selectionSet.flatMap((field) => field.getProjectionFields(relatedNode));
 
         const projectionMap = new Cypher.MapProjection(relatedNode);
         for (const field of projectionFields) {

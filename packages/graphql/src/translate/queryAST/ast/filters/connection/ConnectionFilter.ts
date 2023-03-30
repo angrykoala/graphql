@@ -1,15 +1,21 @@
 import Cypher from "@neo4j/cypher-builder";
+import type { ConcreteEntity } from "../../../../../schema-model/entity/ConcreteEntity";
 import type { Relationship } from "../../../../../schema-model/relationship/Relationship";
-import type { WhereOperator } from "../../factory/parse-operation";
+import type { RelationshipWhereOperator } from "../../../../where/types";
 import { directionToCypher } from "../../../utils";
-import { FilterAST } from "./FilterAST";
-import type { PropertyFilterAST } from "./PropertyFilterAST";
+import { QueryASTNode } from "../../QueryASTNode";
+import type { LogicalFilter } from "../LogicalFilter";
+import type { PropertyFilter } from "../PropertyFilter";
+import type { ConnectionNodeFilter } from "./ConnectionNodeFilter";
 
-export class RelationshipFilterAST extends FilterAST {
-    private relationshipFilters: PropertyFilterAST[] = [];
-    private targetNodeFilters: FilterAST[] = [];
+export class ConnectionFilter extends QueryASTNode {
+    private targetNodeFilters: ConnectionNodeFilter[] = [];
+
+    private relationshipFilters: Array<LogicalFilter | PropertyFilter> = [];
+
     private relationship: Relationship;
-    private operator: WhereOperator | undefined;
+    private operator: RelationshipWhereOperator;
+
     private isNot: boolean;
 
     constructor({
@@ -18,53 +24,48 @@ export class RelationshipFilterAST extends FilterAST {
         isNot,
     }: {
         relationship: Relationship;
-        operator: WhereOperator | undefined;
+        operator: RelationshipWhereOperator | undefined;
         isNot: boolean;
     }) {
         super();
         this.relationship = relationship;
         this.isNot = isNot;
-        this.operator = operator;
+        this.operator = operator || "SOME";
     }
 
-    public addRelationshipFilter(filter: PropertyFilterAST): void {
-        this.relationshipFilters.push(filter);
+    public addConnectionNodeFilter(nodeFilter: ConnectionNodeFilter): void {
+        this.targetNodeFilters.push(nodeFilter);
     }
 
-    public addTargetNodeFilter(filter: FilterAST): void {
-        this.targetNodeFilters.push(filter);
-    }
-    // TODO: maybe this should be a more generic relationship node with a filter child
     public getPredicate(parentNode: Cypher.Node): Cypher.Predicate | undefined {
-        // TODO: Make related pattern an util
-        const relatedEntity = this.relationship.target;
+        //TODO: not concrete entities
+        const relatedEntity = this.relationship.target as ConcreteEntity;
         const relatedNode = new Cypher.Node({
             labels: relatedEntity.labels,
         });
-        const relationshipType = this.relationship.type;
+        const relationshipVar = new Cypher.Relationship({
+            type: this.relationship.type,
+        });
 
         const pattern = new Cypher.Pattern(parentNode)
             .withoutLabels()
-            .related(
-                new Cypher.Relationship({
-                    type: relationshipType,
-                })
-            )
+            .related(relationshipVar)
             .withDirection(directionToCypher(this.relationship.direction))
-            .withoutVariable()
             .to(relatedNode);
 
-        const predicate = this.createRelationshipOperation(pattern, relatedNode);
+        const predicate = this.createRelationshipOperation(pattern, relatedNode, relationshipVar);
         if (!predicate) return undefined;
         return this.wrapInNotIfNeeded(predicate);
     }
 
     private createRelationshipOperation(
         pattern: Cypher.Pattern,
-        relatedNode: Cypher.Node
+        relatedNode: Cypher.Node,
+        relationshipVar: Cypher.Relationship
     ): Cypher.Predicate | undefined {
         const predicates = this.targetNodeFilters.map((c) => c.getPredicate(relatedNode));
-        const innerPredicate = Cypher.and(...predicates);
+        const relationshipPredicates = this.relationshipFilters.map((c) => c.getPredicate(relationshipVar));
+        const innerPredicate = Cypher.and(...predicates, ...relationshipPredicates);
 
         if (!innerPredicate) return undefined;
 

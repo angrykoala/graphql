@@ -1,7 +1,7 @@
 import Cypher from "@neo4j/cypher-builder";
-import type { Relationship } from "../../../../schema-model/relationship/Relationship";
+import type { Relationship } from "../../../../../schema-model/relationship/Relationship";
 import { QueryASTNode } from "../../QueryASTNode";
-import { directionToCypher } from "../../utils";
+import { directionToCypher } from "../../../utils";
 import type { FilterAST } from "../filter/FilterAST";
 import type { LogicalFilterAST } from "../filter/LogicalFilter";
 import type { PropertyFilterAST } from "../filter/PropertyFilterAST";

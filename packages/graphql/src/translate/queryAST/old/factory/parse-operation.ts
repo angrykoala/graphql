@@ -1,5 +1,5 @@
 import Cypher from "@neo4j/cypher-builder";
-import { Attribute } from "../../../schema-model/attribute/Attribute";
+import { Attribute } from "../../../../schema-model/attribute/Attribute";
 import type {
     ArrayWhereOperator,
     NumericalWhereOperator,
@@ -7,7 +7,7 @@ import type {
     RelationshipWhereOperator,
     SpatialWhereOperator,
     StringWhereOperator,
-} from "../../where/types";
+} from "../../../where/types";
 
 export type WhereOperator =
     | NumericalWhereOperator

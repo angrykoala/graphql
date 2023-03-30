@@ -1,16 +1,13 @@
 import Cypher from "@neo4j/cypher-builder";
+import type { LogicalOperators } from "../../operators";
 import { QueryASTNode } from "../QueryASTNode";
-import type { PropertyFilter } from "./PropertyFilter";
-
-type LogicalOperation = "NOT" | "AND" | "OR";
-
-type Filter = PropertyFilter | LogicalFilter;
+import type { Filter } from "./Filter";
 
 export class LogicalFilter extends QueryASTNode {
-    private operation: LogicalOperation;
-    protected children: Array<Filter>;
+    private operation: LogicalOperators;
+    protected children: Filter[];
 
-    constructor({ operation, filters }: { operation: LogicalOperation; filters: Filter[] }) {
+    constructor({ operation, filters }: { operation: LogicalOperators; filters: Filter[] }) {
         super();
         this.operation = operation;
         if (operation === "NOT" && filters.length > 1) {
