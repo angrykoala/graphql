@@ -70,11 +70,11 @@ export class AttributeField extends QueryASTNode {
         return this.createApocConvertFormat(fieldProperty);
     }
 
-    private createApocConvertFormat(variableOrProperty: Cypher.Variable | Cypher.PropertyRef): Cypher.Expr {
+    private createApocConvertFormat(variableOrProperty: Cypher.Variable | Cypher.Property): Cypher.Expr {
         return Cypher.apoc.date.convertFormat(variableOrProperty, "iso_zoned_date_time", "iso_offset_date_time");
     }
 
-    private createPointProjectionMap(variable: Cypher.Variable | Cypher.PropertyRef): Cypher.Map {
+    private createPointProjectionMap(variable: Cypher.Variable | Cypher.Property): Cypher.Map {
         const projectionMap = new Cypher.Map();
         projectionMap.set({ point: variable });
 

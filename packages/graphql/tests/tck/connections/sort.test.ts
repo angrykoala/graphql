@@ -86,15 +86,13 @@ describe("Relationship Properties Cypher", () => {
             LIMIT $param0
             CALL {
                 WITH this
-                MATCH (this)<-[this_connection_actorsConnectionthis0:ACTED_IN]-(this_Actor:\`Actor\`)
-                WITH { node: { name: this_Actor.name } } AS edge
+                MATCH (this)<-[this0:ACTED_IN]-(this1:\`Actor\`)
+                WITH { node: { name: this1.name } } AS edge
                 WITH collect(edge) AS edges
                 WITH edges, size(edges) AS totalCount
-                RETURN { edges: edges, totalCount: totalCount } AS this_actorsConnection
+                RETURN { edges: edges, totalCount: totalCount } AS var2
             }
-            WITH { node: this { .title, actorsConnection: this_actorsConnection } } AS edge, totalCount, this
-            ORDER BY this.title ASC
-            LIMIT $this_limit
+            WITH { node: this { .title, actorsConnection: var2 } } AS edge, totalCount, this
             WITH collect(edge) AS edges, totalCount
             RETURN { edges: edges, totalCount: totalCount } AS this"
         `);
@@ -102,10 +100,6 @@ describe("Relationship Properties Cypher", () => {
         expect(formatParams(result.params)).toMatchInlineSnapshot(`
             "{
                 \\"param0\\": {
-                    \\"low\\": 5,
-                    \\"high\\": 0
-                },
-                \\"this_limit\\": {
                     \\"low\\": 5,
                     \\"high\\": 0
                 }

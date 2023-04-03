@@ -4,10 +4,8 @@ import type { Relationship } from "../../../../../schema-model/relationship/Rela
 import { filterTruthy } from "../../../../../utils/utils";
 import type { ProjectionField } from "../../../types";
 import { directionToCypher } from "../../../utils";
-import { ConnectionEdgeFilter } from "../../filters/connection/ConnectionEdgeFilter";
+import type { ConnectionEdgeFilter } from "../../filters/connection/ConnectionEdgeFilter";
 import type { ConnectionNodeFilter } from "../../filters/connection/ConnectionNodeFilter";
-import type { LogicalFilter } from "../../filters/LogicalFilter";
-import type { PropertyFilter } from "../../filters/PropertyFilter";
 import { QueryASTNode } from "../../QueryASTNode";
 import type { AttributeField } from "../AttributeField";
 import type { SelectionSetField } from "../SelectionSetField";
@@ -89,13 +87,23 @@ export class ConnectionField extends QueryASTNode {
             return field.getProjectionFields(relatedNode);
         });
 
+        const nodeSelectionSetSubqueries = this.nodeSelectionSet.flatMap((field) => {
+            return field.getSubqueries(relatedNode);
+        });
+
         const nodeMap = new Cypher.Map();
         this.addFieldsToMap(nodeMap, relatedNode, nodeProjectionFields);
+
+        if (nodeMap.size === 0) {
+            nodeMap.set("__resolveType", new Cypher.Literal(relatedEntity.name));
+            nodeMap.set("__id", Cypher.id(relatedNode));
+        }
 
         const edgeProjection = new Cypher.Map();
         const edgeProjectionFields = this.edgeSelectionSet.flatMap((field) => {
             return field.getProjectionFields(relationshipVar);
         });
+
         this.addFieldsToMap(edgeProjection, relationshipVar, edgeProjectionFields);
         edgeProjection.set({
             node: nodeMap,
@@ -106,13 +114,14 @@ export class ConnectionField extends QueryASTNode {
         const edgesVar = new Cypher.NamedVariable("edges"); // TODO: remove name
         const totalCountVar = new Cypher.NamedVariable("totalCount");
 
-        const projectionWith = match
-            .with([edgeProjection, edgeVar])
+        const projectionWith = new Cypher.With([edgeProjection, edgeVar])
             .with([Cypher.collect(edgeVar), edgesVar])
             .with(edgesVar, [Cypher.size(edgesVar), totalCountVar])
             .return([new Cypher.Map({ edges: edgesVar, totalCount: totalCountVar }), this.projectionVariable]);
         // TODO: nested Subqueries
-        return [new Cypher.Call(projectionWith).innerWith(parentNode)];
+        return [
+            new Cypher.Call(Cypher.concat(match, ...nodeSelectionSetSubqueries, projectionWith)).innerWith(parentNode),
+        ];
     }
 
     private addFieldsToMap(

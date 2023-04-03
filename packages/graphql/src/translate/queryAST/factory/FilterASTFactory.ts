@@ -106,28 +106,35 @@ export class FilterASTFactory {
         const targetNode = relationship.target as ConcreteEntity; // TODO: accept entities
 
         const edgeFilters: Array<LogicalFilter | PropertyFilter> = [];
+        Object.entries(where).forEach(([key, value]: [string, GraphQLWhereArg | GraphQLWhereArg[]]) => {
+            const connectionWhereField = parseConnectionWhereFields(key);
+            if (connectionWhereField.fieldName === "edge") {
+                console.log(connectionWhereField.fieldName, value);
+            }
+            if (connectionWhereField.fieldName === "node") {
+                const targetNodeFilters = this.createFilters(value, targetNode);
+                const connectionNodeFilter = new ConnectionNodeFilter({
+                    isNot: connectionWhereField.isNot,
+                    filters: targetNodeFilters,
+                });
 
-        const nodeFilters: ConnectionNodeFilter[] = [];
+                connectionFilter.addConnectionNodeFilter(connectionNodeFilter);
+            }
 
-        // Object.entries(where).forEach(([key, value]: [string, GraphQLWhereArg | GraphQLWhereArg[]]) => {
-        //     const connectionWhereField = parseConnectionWhereFields(key);
-        //     if (connectionWhereField.fieldName === "node") {
-        //         const targetNodeFilters = this.createFilters(value, targetNode);
+            //         const nodeFilter = new ConnectionNodeFilter({
+            //             isNot: connectionWhereField.isNot,
+            //             filters: targetNodeFilters,
+            //         });
+            //         connectionFilter.addConnectionNodeFilter(nodeFilter);
+            //     }
 
-        //         const nodeFilter = new ConnectionNodeFilter({
-        //             isNot: connectionWhereField.isNot,
-        //             filters: targetNodeFilters,
-        //         });
-        //         connectionFilter.addConnectionNodeFilter(nodeFilter);
-        //     }
+            //     if (connectionWhereField.fieldName === "edge") {
+            //     }
 
-        //     if (connectionWhereField.fieldName === "edge") {
-        //     }
-
-        //     // if (["NOT", "OR", "AND"].includes(prop)) {
-        //     //     return this.createLogicalFilter(prop as "NOT" | "OR" | "AND", value, entity);
-        //     // }
-        // });
+            //     // if (["NOT", "OR", "AND"].includes(prop)) {
+            //     //     return this.createLogicalFilter(prop as "NOT" | "OR" | "AND", value, entity);
+            //     // }
+        });
 
         // node?: GraphQLWhereArg;
         // node_NOT?: GraphQLWhereArg;
@@ -137,7 +144,6 @@ export class FilterASTFactory {
         // OR?: ConnectionWhereArg[];
         // NOT?: ConnectionWhereArg;
 
-        console.log(where);
         // const targetNodeFilters = this.createFilters(where, targetNode);
 
         // connectionFilter.addTargetNodeFilter(...targetNodeFilters);

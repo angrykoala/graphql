@@ -3316,6 +3316,7 @@ __metadata:
     ts-jest: 29.0.5
     ts-node: 10.9.1
     typescript: 5.0.3
+    utility-types: ^3.10.0
     uuid: ^9.0.0
     ws: 8.13.0
   peerDependencies:

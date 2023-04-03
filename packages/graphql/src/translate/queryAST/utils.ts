@@ -11,7 +11,7 @@ export function createNodeFromEntity(entity: ConcreteEntity, name?: string): Cyp
     });
 }
 
-export function getPropertyFromAttribute(variable: Cypher.Variable, attribute: Attribute): Cypher.PropertyRef {
+export function getPropertyFromAttribute(variable: Cypher.Variable, attribute: Attribute): Cypher.Property {
     return variable.property(attribute.name);
 }
 

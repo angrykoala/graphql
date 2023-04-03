@@ -3,6 +3,7 @@ import type { ConcreteEntity } from "../../../../schema-model/entity/ConcreteEnt
 import type { Relationship } from "../../../../schema-model/relationship/Relationship";
 import type { ProjectionField } from "../../types";
 import { directionToCypher } from "../../utils";
+import type { Filter } from "../filters/Filter";
 import { QueryASTNode } from "../QueryASTNode";
 import type { SelectionSetField } from "./SelectionSetField";
 
@@ -11,6 +12,7 @@ export class RelationshipField extends QueryASTNode {
     private alias: string;
     private directed: boolean;
     private selectionSet: SelectionSetField[] = [];
+    private filters: Filter[] = [];
 
     private projectionVariable = new Cypher.Variable();
 
@@ -19,17 +21,20 @@ export class RelationshipField extends QueryASTNode {
         alias,
         directed,
         selectionSetFields,
+        filters,
     }: {
         relationship: Relationship;
         alias: string;
         directed: boolean;
         selectionSetFields: Array<SelectionSetField>;
+        filters: Filter[];
     }) {
         super();
         this.relationship = relationship;
         this.alias = alias;
         this.directed = directed;
         this.selectionSet = selectionSetFields;
+        this.filters = filters;
     }
 
     public getProjectionFields(_variable: Cypher.Variable): ProjectionField[] {
@@ -50,12 +55,18 @@ export class RelationshipField extends QueryASTNode {
         const pattern = new Cypher.Pattern(parentNode)
             .withoutLabels()
             .related(relationshipVar)
-            .withoutVariable()
+            // .withoutVariable()
             .withDirection(directionToCypher(this.relationship.direction, this.directed))
             .to(relatedNode);
 
         const match = new Cypher.Match(pattern);
-        // get subqueries
+
+        const filters = this.filters.flatMap((f) => f.getPredicate(relatedNode));
+        const andFilters = Cypher.and(...filters);
+        if (andFilters) {
+            match.where(andFilters);
+        }
+
         const projectionFields = this.selectionSet.flatMap((field) => field.getProjectionFields(relatedNode));
 
         const projectionMap = new Cypher.MapProjection(relatedNode);
@@ -63,7 +74,8 @@ export class RelationshipField extends QueryASTNode {
             projectionMap.set(field);
         }
 
-        const mapIntermediateProjection = new Cypher.Variable();
+        // const mapIntermediateProjection = new Cypher.Variable();
+        const mapIntermediateProjection = relatedNode; // NOTE: Reusing same node just to avoid breaking TCK on refactor
         const projectionWith = match
             .with([projectionMap, mapIntermediateProjection])
             .return([Cypher.collect(mapIntermediateProjection), this.projectionVariable]);

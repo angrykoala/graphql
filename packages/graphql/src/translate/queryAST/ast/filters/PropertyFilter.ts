@@ -56,7 +56,7 @@ export class PropertyFilter extends QueryASTNode {
         return this.wrapInNotIfNeeded(baseOperation);
     }
 
-    private getNullPredicate(propertyRef: Cypher.PropertyRef): Cypher.Predicate {
+    private getNullPredicate(propertyRef: Cypher.Property): Cypher.Predicate {
         if (this.isNot) {
             return Cypher.isNotNull(propertyRef);
         } else {

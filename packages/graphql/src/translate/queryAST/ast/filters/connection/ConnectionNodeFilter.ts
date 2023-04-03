@@ -16,7 +16,6 @@ export class ConnectionNodeFilter extends QueryASTNode {
         const predicates = this.filters.map((f) => f.getPredicate(node));
 
         const andPredicate = Cypher.and(...predicates);
-
         return this.wrapInNotIfNeeded(andPredicate);
     }
 

@@ -1,7 +1,7 @@
 import type { ResolveTree } from "graphql-parse-resolve-info";
 import type { ConcreteEntity } from "../../../schema-model/entity/ConcreteEntity";
 import type { Relationship } from "../../../schema-model/relationship/Relationship";
-import type { ConnectionWhereArg } from "../../../types";
+import type { ConnectionWhereArg, GraphQLWhereArg } from "../../../types";
 import { filterTruthy } from "../../../utils/utils";
 import { AttributeField } from "../ast/projection/AttributeField";
 import { ConnectionField } from "../ast/projection/connection/ConnectionField";
@@ -30,9 +30,7 @@ export class SelectionSetASTFactory {
 
     private createSelectionSetField(value: ResolveTree, entity: ConcreteEntity): SelectionSetField | undefined {
         // TODO: relationship projections
-
         const { fieldName, isConnection } = parseSelectionSetField(value.name);
-
         const relationship = entity.findRelationship(fieldName);
         if (isConnection) {
             if (!relationship) throw new Error(`Relationship not found for connection ${fieldName}`);
@@ -64,19 +62,25 @@ export class SelectionSetASTFactory {
         relationship: Relationship;
         resolveTree: ResolveTree;
     }): RelationshipField {
-        const childEntity = relationship.target;
+        const childEntity = relationship.target as ConcreteEntity;
         const alias = resolveTree.alias;
         const directed = Boolean(resolveTree.args.directed);
+        const relationshipWhere: GraphQLWhereArg = (resolveTree.args.where || {}) as GraphQLWhereArg;
+
         const resolveTreeFields = { ...resolveTree.fieldsByTypeName[childEntity.name] };
 
         const selectionSetFields = Object.entries(resolveTreeFields).map(([_, value]) => {
             return this.createSelectionSetField(value, childEntity as any);
         });
+
+        const relationshipFilters = this.filterFactory.createFilters(relationshipWhere, childEntity);
+
         return new RelationshipField({
             relationship,
             alias,
             directed,
             selectionSetFields: filterTruthy(selectionSetFields),
+            filters: relationshipFilters,
         });
     }
 
@@ -94,12 +98,20 @@ export class SelectionSetASTFactory {
         const resolveTreeFields = { ...resolveTree.fieldsByTypeName[relationship.connectionFieldTypename] };
 
         const edgesProjection: ResolveTree | undefined = resolveTreeFields.edges;
-        const edgeProjectionFields = { ...edgesProjection.fieldsByTypeName[relationship.relationshipFieldTypename] };
+        let edgeProjectionFields: Record<string, ResolveTree> = {};
+        if (edgesProjection) {
+            edgeProjectionFields = {
+                ...edgesProjection.fieldsByTypeName[relationship.relationshipFieldTypename],
+            };
+        }
 
-        const nodesProjection: ResolveTree = edgeProjectionFields.node || {};
+        const nodesProjection: ResolveTree = edgeProjectionFields.node;
         delete edgeProjectionFields.node;
 
-        const nodesProjectionFields = { ...nodesProjection.fieldsByTypeName[childEntity.name] };
+        let nodesProjectionFields: Record<string, ResolveTree> = {};
+        if (nodesProjection) {
+            nodesProjectionFields = { ...nodesProjection.fieldsByTypeName[childEntity.name] };
+        }
 
         const nodeFieldsAST = Object.entries(nodesProjectionFields).map(([_, value]) => {
             return this.createSelectionSetField(value, childEntity);
