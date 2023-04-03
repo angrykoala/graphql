@@ -70,40 +70,4 @@ export class QueryAST {
 
         return subqueries;
     }
-
-    // public transpile(varName?: string): Cypher.Clause {
-    //     const node = createNodeFromEntity(this.entity, varName);
-    //     const match = new Cypher.Match(node);
-
-    //     const predicates = this.filters.map((c) => c.getPredicate(node));
-    //     const andPredicate = Cypher.and(...predicates);
-
-    //     if (andPredicate) {
-    //         match.where(andPredicate);
-    //     }
-
-    //     const projection = getOrThrow(this.projection);
-    //     const projectionField = projection.getProjectionFields(node);
-
-    //     const projectionMap = new Cypher.MapProjection(node);
-    //     for (const field of projectionField) {
-    //         projectionMap.set(field);
-    //     }
-
-    //     let returnClause: Cypher.Return;
-    //     if (varName) {
-    //         returnClause = new Cypher.Return([projectionMap, varName]);
-    //     } else {
-    //         returnClause = new Cypher.Return(projectionMap);
-    //     }
-
-    //     const subqueries = this.getSubqueries(node);
-
-    //     return Cypher.concat(match, ...subqueries, returnClause);
-    // }
-
-    // private getSubqueries(node: Cypher.Node): Cypher.Clause[] {
-    //     const projection = getOrThrow(this.projection);
-    //     return projection.getSubqueries(node);
-    // }
 }

@@ -18,10 +18,17 @@
  */
 
 import type { Node } from "../classes";
-import type { Context } from "../types";
+import type { Context, CypherFieldReferenceMap, GraphQLOptionsArg, GraphQLWhereArg } from "../types";
 
-import type Cypher from "@neo4j/cypher-builder";
+import Cypher from "@neo4j/cypher-builder";
 import { QueryASTFactory } from "./queryAST/factory/QueryASTFactory";
+import { cursorToOffset } from "graphql-relay";
+import { AUTH_FORBIDDEN_ERROR } from "../constants";
+import { SCORE_FIELD } from "../graphql/directives/fulltext";
+import { createAuthPredicates } from "./create-auth-predicates";
+import createProjectionAndParams from "./create-projection-and-params";
+import { addSortAndLimitOptionsToClause } from "./projection/subquery/add-sort-and-limit-to-clause";
+import { createMatchClause } from "./translate-top-level-match";
 
 function testQueryAST({ context, node }: { context: Context; node: Node }): Cypher.CypherResult {
     const { resolveTree } = context;
@@ -45,172 +52,174 @@ export function translateRead(
     },
     varName = "this"
 ): Cypher.CypherResult {
-    return testQueryAST({ context, node });
-    // const { resolveTree } = context;
-    // const matchNode = new Cypher.NamedNode(varName, { labels: node.getLabels(context) });
+    if (!isRootConnectionField) {
+        return testQueryAST({ context, node });
+    }
+    const { resolveTree } = context;
+    const matchNode = new Cypher.NamedNode(varName, { labels: node.getLabels(context) });
 
-    // const cypherFieldAliasMap: CypherFieldReferenceMap = {};
+    const cypherFieldAliasMap: CypherFieldReferenceMap = {};
 
-    // const where = resolveTree.args.where as GraphQLWhereArg | undefined;
+    const where = resolveTree.args.where as GraphQLWhereArg | undefined;
 
-    // let projAuth: Cypher.Clause | undefined;
+    let projAuth: Cypher.Clause | undefined;
 
-    // const {
-    //     matchClause: topLevelMatch,
-    //     preComputedWhereFieldSubqueries,
-    //     whereClause: topLevelWhereClause,
-    // } = createMatchClause({
-    //     matchNode,
-    //     node,
-    //     context,
-    //     operation: "READ",
-    //     where,
-    // });
+    const {
+        matchClause: topLevelMatch,
+        preComputedWhereFieldSubqueries,
+        whereClause: topLevelWhereClause,
+    } = createMatchClause({
+        matchNode,
+        node,
+        context,
+        operation: "READ",
+        where,
+    });
 
-    // const projection = createProjectionAndParams({
-    //     node,
-    //     context,
-    //     resolveTree,
-    //     varName: new Cypher.NamedNode(varName),
-    //     cypherFieldAliasMap,
-    // });
+    const projection = createProjectionAndParams({
+        node,
+        context,
+        resolveTree,
+        varName: new Cypher.NamedNode(varName),
+        cypherFieldAliasMap,
+    });
 
-    // if (projection.meta?.authValidatePredicates?.length) {
-    //     projAuth = Cypher.apoc.util.validate(
-    //         Cypher.not(Cypher.and(...projection.meta.authValidatePredicates)),
-    //         AUTH_FORBIDDEN_ERROR,
-    //         new Cypher.Literal([0])
-    //     );
-    // }
+    if (projection.meta?.authValidatePredicates?.length) {
+        projAuth = Cypher.apoc.util.validate(
+            Cypher.not(Cypher.and(...projection.meta.authValidatePredicates)),
+            AUTH_FORBIDDEN_ERROR,
+            new Cypher.Literal([0])
+        );
+    }
 
-    // const authPredicates = createAuthPredicates({
-    //     operations: "READ",
-    //     entity: node,
-    //     context,
-    //     allow: {
-    //         node,
-    //         varName,
-    //     },
-    // });
+    const authPredicates = createAuthPredicates({
+        operations: "READ",
+        entity: node,
+        context,
+        allow: {
+            node,
+            varName,
+        },
+    });
 
-    // if (authPredicates) {
-    //     (topLevelWhereClause || topLevelMatch).where(
-    //         Cypher.apoc.util.validatePredicate(Cypher.not(authPredicates), AUTH_FORBIDDEN_ERROR)
-    //     );
-    // }
+    if (authPredicates) {
+        (topLevelWhereClause || topLevelMatch).where(
+            Cypher.apoc.util.validatePredicate(Cypher.not(authPredicates), AUTH_FORBIDDEN_ERROR)
+        );
+    }
 
-    // const projectionSubqueries = Cypher.concat(...projection.subqueries);
-    // const projectionSubqueriesBeforeSort = Cypher.concat(...projection.subqueriesBeforeSort);
+    const projectionSubqueries = Cypher.concat(...projection.subqueries);
+    const projectionSubqueriesBeforeSort = Cypher.concat(...projection.subqueriesBeforeSort);
 
-    // let orderClause: Cypher.Clause | Cypher.With | undefined;
+    let orderClause: Cypher.Clause | Cypher.With | undefined;
 
-    // const optionsInput = (resolveTree.args.options || {}) as GraphQLOptionsArg;
+    const optionsInput = (resolveTree.args.options || {}) as GraphQLOptionsArg;
 
-    // if (context.fulltextIndex) {
-    //     optionsInput.sort = optionsInput.sort?.[node?.singular] || optionsInput.sort;
-    // }
+    if (context.fulltextIndex) {
+        optionsInput.sort = optionsInput.sort?.[node?.singular] || optionsInput.sort;
+    }
 
-    // if (node.queryOptions) {
-    //     optionsInput.limit = node.queryOptions.getLimit(optionsInput.limit); // TODO: improve this
-    //     resolveTree.args.options = resolveTree.args.options || {};
-    //     (resolveTree.args.options as Record<string, any>).limit = optionsInput.limit;
-    // }
+    if (node.queryOptions) {
+        optionsInput.limit = node.queryOptions.getLimit(optionsInput.limit); // TODO: improve this
+        resolveTree.args.options = resolveTree.args.options || {};
+        (resolveTree.args.options as Record<string, any>).limit = optionsInput.limit;
+    }
 
-    // const hasOrdering = optionsInput.sort || optionsInput.limit || optionsInput.offset;
+    const hasOrdering = optionsInput.sort || optionsInput.limit || optionsInput.offset;
 
-    // if (hasOrdering) {
-    //     orderClause = new Cypher.With("*");
-    //     addSortAndLimitOptionsToClause({
-    //         optionsInput,
-    //         target: matchNode,
-    //         projectionClause: orderClause as Cypher.With,
-    //         nodeField: node.singular,
-    //         fulltextScoreVariable: context.fulltextIndex?.scoreVariable,
-    //         cypherFields: node.cypherFields,
-    //         cypherFieldAliasMap,
-    //     });
-    // }
+    if (hasOrdering) {
+        orderClause = new Cypher.With("*");
+        addSortAndLimitOptionsToClause({
+            optionsInput,
+            target: matchNode,
+            projectionClause: orderClause as Cypher.With,
+            nodeField: node.singular,
+            fulltextScoreVariable: context.fulltextIndex?.scoreVariable,
+            cypherFields: node.cypherFields,
+            cypherFieldAliasMap,
+        });
+    }
 
-    // const projectionExpression = new Cypher.RawCypher((env) => {
-    //     return [`${varName} ${projection.projection.getCypher(env)}`, projection.params];
-    // });
+    const projectionExpression = new Cypher.RawCypher((env) => {
+        return [`${varName} ${projection.projection.getCypher(env)}`, projection.params];
+    });
 
-    // let returnClause = new Cypher.Return([projectionExpression, varName]);
+    let returnClause = new Cypher.Return([projectionExpression, varName]);
 
-    // if (context.fulltextIndex?.scoreVariable) {
-    //     returnClause = new Cypher.Return(
-    //         [projectionExpression, varName],
-    //         [context.fulltextIndex?.scoreVariable, SCORE_FIELD]
-    //     );
-    // }
+    if (context.fulltextIndex?.scoreVariable) {
+        returnClause = new Cypher.Return(
+            [projectionExpression, varName],
+            [context.fulltextIndex?.scoreVariable, SCORE_FIELD]
+        );
+    }
 
-    // let projectionClause: Cypher.Clause = returnClause; // TODO avoid reassign
-    // let connectionPreClauses: Cypher.Clause | undefined;
+    let projectionClause: Cypher.Clause = returnClause; // TODO avoid reassign
+    let connectionPreClauses: Cypher.Clause | undefined;
 
-    // if (isRootConnectionField) {
-    //     const hasConnectionOrdering = resolveTree.args.first || resolveTree.args.after || resolveTree.args.sort;
-    //     if (hasConnectionOrdering) {
-    //         const afterInput = resolveTree.args.after as string | undefined;
-    //         const offset = afterInput ? cursorToOffset(afterInput) + 1 : undefined;
-    //         orderClause = new Cypher.With("*");
-    //         addSortAndLimitOptionsToClause({
-    //             optionsInput: {
-    //                 sort: resolveTree.args.sort as any,
-    //                 limit: resolveTree.args.first as any,
-    //                 offset,
-    //             },
-    //             target: matchNode,
-    //             projectionClause: orderClause as Cypher.With,
-    //             nodeField: node.singular,
-    //             fulltextScoreVariable: context.fulltextIndex?.scoreVariable,
-    //             cypherFields: node.cypherFields,
-    //             cypherFieldAliasMap,
-    //         });
-    //     }
+    if (isRootConnectionField) {
+        const hasConnectionOrdering = resolveTree.args.first || resolveTree.args.after || resolveTree.args.sort;
+        if (hasConnectionOrdering) {
+            const afterInput = resolveTree.args.after as string | undefined;
+            const offset = afterInput ? cursorToOffset(afterInput) + 1 : undefined;
+            orderClause = new Cypher.With("*");
+            addSortAndLimitOptionsToClause({
+                optionsInput: {
+                    sort: resolveTree.args.sort as any,
+                    limit: resolveTree.args.first as any,
+                    offset,
+                },
+                target: matchNode,
+                projectionClause: orderClause as Cypher.With,
+                nodeField: node.singular,
+                fulltextScoreVariable: context.fulltextIndex?.scoreVariable,
+                cypherFields: node.cypherFields,
+                cypherFieldAliasMap,
+            });
+        }
 
-    //     // TODO: unify with createConnectionClause
-    //     const edgesVar = new Cypher.NamedVariable("edges");
-    //     const edgeVar = new Cypher.NamedVariable("edge");
-    //     const totalCountVar = new Cypher.NamedVariable("totalCount");
+        // TODO: unify with createConnectionClause
+        const edgesVar = new Cypher.NamedVariable("edges");
+        const edgeVar = new Cypher.NamedVariable("edge");
+        const totalCountVar = new Cypher.NamedVariable("totalCount");
 
-    //     const withCollect = new Cypher.With([Cypher.collect(matchNode), edgesVar]).with(edgesVar, [
-    //         Cypher.size(edgesVar),
-    //         totalCountVar,
-    //     ]);
+        const withCollect = new Cypher.With([Cypher.collect(matchNode), edgesVar]).with(edgesVar, [
+            Cypher.size(edgesVar),
+            totalCountVar,
+        ]);
 
-    //     const unwind = new Cypher.Unwind([edgesVar, matchNode]).with(matchNode, totalCountVar);
-    //     connectionPreClauses = Cypher.concat(withCollect, unwind);
+        const unwind = new Cypher.Unwind([edgesVar, matchNode]).with(matchNode, totalCountVar);
+        connectionPreClauses = Cypher.concat(withCollect, unwind);
 
-    //     const connectionEdge = new Cypher.Map({
-    //         node: projectionExpression,
-    //     });
+        const connectionEdge = new Cypher.Map({
+            node: projectionExpression,
+        });
 
-    //     const withTotalCount = new Cypher.With([connectionEdge, edgeVar], totalCountVar, matchNode);
-    //     const returnClause = new Cypher.With([Cypher.collect(edgeVar), edgesVar], totalCountVar).return([
-    //         new Cypher.Map({
-    //             edges: edgesVar,
-    //             totalCount: totalCountVar,
-    //         }),
-    //         matchNode,
-    //     ]);
+        const withTotalCount = new Cypher.With([connectionEdge, edgeVar], totalCountVar, matchNode);
+        const returnClause = new Cypher.With([Cypher.collect(edgeVar), edgesVar], totalCountVar).return([
+            new Cypher.Map({
+                edges: edgesVar,
+                totalCount: totalCountVar,
+            }),
+            matchNode,
+        ]);
 
-    //     projectionClause = Cypher.concat(withTotalCount, returnClause);
-    // }
+        projectionClause = Cypher.concat(withTotalCount, returnClause);
+    }
 
-    // const preComputedWhereFields: Cypher.Clause | undefined =
-    //     preComputedWhereFieldSubqueries && !preComputedWhereFieldSubqueries.empty
-    //         ? Cypher.concat(preComputedWhereFieldSubqueries, topLevelWhereClause)
-    //         : topLevelWhereClause;
+    const preComputedWhereFields: Cypher.Clause | undefined =
+        preComputedWhereFieldSubqueries && !preComputedWhereFieldSubqueries.empty
+            ? Cypher.concat(preComputedWhereFieldSubqueries, topLevelWhereClause)
+            : topLevelWhereClause;
 
-    // const readQuery = Cypher.concat(
-    //     topLevelMatch,
-    //     preComputedWhereFields,
-    //     projAuth,
-    //     connectionPreClauses,
-    //     projectionSubqueriesBeforeSort,
-    //     orderClause, // Required for performance optimization
-    //     projectionSubqueries,
-    //     projectionClause
-    // );
-    // return readQuery.build(undefined, context.cypherParams ? { cypherParams: context.cypherParams } : {});
+    const readQuery = Cypher.concat(
+        topLevelMatch,
+        preComputedWhereFields,
+        projAuth,
+        connectionPreClauses,
+        projectionSubqueriesBeforeSort,
+        orderClause, // Required for performance optimization
+        projectionSubqueries,
+        projectionClause
+    );
+    return readQuery.build(undefined, context.cypherParams ? { cypherParams: context.cypherParams } : {});
 }

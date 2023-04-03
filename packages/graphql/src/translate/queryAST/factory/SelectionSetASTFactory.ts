@@ -93,7 +93,7 @@ export class SelectionSetASTFactory {
         const directed = Boolean(resolveTree.args.directed);
         const resolveTreeFields = { ...resolveTree.fieldsByTypeName[relationship.connectionFieldTypename] };
 
-        const edgesProjection: ResolveTree = resolveTreeFields.edges || {};
+        const edgesProjection: ResolveTree | undefined = resolveTreeFields.edges;
         const edgeProjectionFields = { ...edgesProjection.fieldsByTypeName[relationship.relationshipFieldTypename] };
 
         const nodesProjection: ResolveTree = edgeProjectionFields.node || {};
