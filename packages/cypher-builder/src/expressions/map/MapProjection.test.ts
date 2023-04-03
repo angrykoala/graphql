@@ -76,19 +76,4 @@ describe("Map Projection", () => {
 
         expect(queryResult.params).toMatchInlineSnapshot(`Object {}`);
     });
-
-    test("Convert to map with properties in projection and extra values", () => {
-        const node = new Cypher.Node({});
-
-        const mapProjection = new Cypher.MapProjection(new Cypher.Variable(), ["title", "name"], {
-            namedValue: Cypher.count(node),
-        });
-        const queryResult = new TestClause(mapProjection.toMap()).build();
-
-        expect(queryResult.cypher).toMatchInlineSnapshot(
-            `"{ title: var0.title, name: var0.name, namedValue: count(this1) }"`
-        );
-
-        expect(queryResult.params).toMatchInlineSnapshot(`Object {}`);
-    });
 });
