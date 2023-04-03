@@ -68,6 +68,7 @@ export class RelationshipField extends QueryASTNode {
         }
 
         const projectionFields = this.selectionSet.flatMap((field) => field.getProjectionFields(relatedNode));
+        const subqueries = this.selectionSet.flatMap((field) => field.getSubqueries(relatedNode));
 
         const projectionMap = new Cypher.MapProjection(relatedNode);
         for (const field of projectionFields) {
@@ -76,10 +77,13 @@ export class RelationshipField extends QueryASTNode {
 
         // const mapIntermediateProjection = new Cypher.Variable();
         const mapIntermediateProjection = relatedNode; // NOTE: Reusing same node just to avoid breaking TCK on refactor
-        const projectionWith = match
-            .with([projectionMap, mapIntermediateProjection])
-            .return([Cypher.collect(mapIntermediateProjection), this.projectionVariable]);
-        // TODO: nested Subqueries
-        return [new Cypher.Call(projectionWith).innerWith(parentNode)];
+        const withReturn = new Cypher.With([projectionMap, mapIntermediateProjection]).return([
+            Cypher.collect(mapIntermediateProjection),
+            this.projectionVariable,
+        ]);
+
+        const nestedQuery = Cypher.concat(match, ...subqueries, withReturn);
+
+        return [new Cypher.Call(nestedQuery).innerWith(parentNode)];
     }
 }
