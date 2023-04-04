@@ -18,24 +18,22 @@
  */
 
 import type Cypher from "@neo4j/cypher-builder";
-import type { SortField } from "./sort/Sort";
+import type { PropertySort } from "./PropertySort";
 
-export type ProjectionField = string | Record<string, Cypher.Expr>;
+export type Sort = PropertySort;
 
-export abstract class QueryASTNode {
-    public getPredicate(variable: Cypher.Variable): Cypher.Predicate | undefined {
-        return undefined;
-    }
+export type SortField = [Cypher.Expr, Cypher.Order] | Cypher.Expr | [Cypher.Expr];
 
-    public getProjectionFields(variable: Cypher.Variable): ProjectionField[] {
-        return [];
-    }
+// export function addSortToClause<C extends SortableClause>({ orderBy, skip, limit }: SortField, clause: C): C {
+//     if (orderBy) {
+//         clause.orderBy(...orderBy);
+//     }
+//     if (limit) {
+//         clause.limit(new Cypher.Param(limit));
+//     }
+//     if (skip) {
+//         clause.limit(new Cypher.Param(skip));
+//     }
 
-    public getSubqueries(node: Cypher.Node): Cypher.Clause[] {
-        return [];
-    }
-
-    public getSortFields(variable: Cypher.Variable): SortField[] {
-        return [];
-    }
-}
+//     return clause;
+// }

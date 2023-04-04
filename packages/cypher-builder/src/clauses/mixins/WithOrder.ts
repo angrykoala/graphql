@@ -44,13 +44,13 @@ export abstract class WithOrder extends ClauseMixin {
         return this;
     }
 
-    public skip(value: number | Param<Integer> | Literal<number>): this {
+    public skip(value: number | Param<Integer | number> | Literal<number>): this {
         const orderByStatement = this.getOrCreateOrderBy();
         orderByStatement.skip(value);
         return this;
     }
 
-    public limit(value: number | Param<Integer> | Literal<number>): this {
+    public limit(value: number | Param<Integer | number> | Literal<number>): this {
         const orderByStatement = this.getOrCreateOrderBy();
         orderByStatement.limit(value);
         return this;

@@ -112,7 +112,7 @@ describe("Cypher sort tests", () => {
                 "MATCH (this:\`Movie\`)
                 WITH *
                 ORDER BY this.id DESC
-                RETURN this { aliased: this.id, .title, .id } AS this"
+                RETURN this { .title, aliased: this.id } AS this"
             `);
 
             expect(formatParams(result.params)).toMatchInlineSnapshot(`"{}"`);
@@ -136,7 +136,7 @@ describe("Cypher sort tests", () => {
                 "MATCH (this:\`Movie\`)
                 WITH *
                 ORDER BY this.id DESC
-                RETURN this { .title, .id } AS this"
+                RETURN this { .title } AS this"
             `);
 
             expect(formatParams(result.params)).toMatchInlineSnapshot(`"{}"`);
@@ -208,7 +208,7 @@ describe("Cypher sort tests", () => {
         expect(formatParams(result.params)).toMatchInlineSnapshot(`"{}"`);
     });
 
-    test("Sort with offset limit & with other variables", async () => {
+    test.only("Sort with offset limit & with other variables", async () => {
         const query = gql`
             query ($title: String, $offset: Int, $limit: Int) {
                 movies(

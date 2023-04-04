@@ -18,24 +18,23 @@
  */
 
 import type Cypher from "@neo4j/cypher-builder";
-import type { SortField } from "./sort/Sort";
+import type { Attribute } from "../../../../schema-model/attribute/Attribute";
+import { getPropertyFromAttribute } from "../../utils";
+import { QueryASTNode } from "../QueryASTNode";
+import type { SortField } from "./Sort";
 
-export type ProjectionField = string | Record<string, Cypher.Expr>;
+export class PropertySort extends QueryASTNode {
+    private attribute: Attribute;
+    private direction: Cypher.Order;
 
-export abstract class QueryASTNode {
-    public getPredicate(variable: Cypher.Variable): Cypher.Predicate | undefined {
-        return undefined;
-    }
-
-    public getProjectionFields(variable: Cypher.Variable): ProjectionField[] {
-        return [];
-    }
-
-    public getSubqueries(node: Cypher.Node): Cypher.Clause[] {
-        return [];
+    constructor({ attribute, direction }: { attribute: Attribute; direction: Cypher.Order }) {
+        super();
+        this.attribute = attribute;
+        this.direction = direction;
     }
 
     public getSortFields(variable: Cypher.Variable): SortField[] {
-        return [];
+        const nodeProperty = getPropertyFromAttribute(variable, this.attribute);
+        return [[nodeProperty, this.direction]];
     }
 }
