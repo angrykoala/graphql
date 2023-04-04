@@ -92,7 +92,12 @@ export class RelationshipField extends QueryASTNode {
             this.addSortToClause(relatedNode, withClause);
         }
 
-        const withReturn = withClause.return([Cypher.collect(mapIntermediateProjection), this.projectionVariable]);
+        let returnExpr: Cypher.Expr = Cypher.collect(mapIntermediateProjection);
+        if (this.relationship.cardinality === "1") {
+            returnExpr = Cypher.head(returnExpr);
+        }
+
+        const withReturn = withClause.return([returnExpr, this.projectionVariable]);
 
         const nestedQuery = Cypher.concat(match, ...subqueries, withReturn);
 

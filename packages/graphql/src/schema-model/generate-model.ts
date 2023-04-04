@@ -196,6 +196,9 @@ function generateRelationshipField(
         const fields = (propertyInterface?.fields || []).map(generateField);
         attributes = filterTruthy(fields);
     }
+
+    const cardinality = fieldTypeMeta.array ? "*" : "1";
+
     return new Relationship({
         name: fieldName,
         type: type as string,
@@ -203,6 +206,7 @@ function generateRelationshipField(
         source,
         target: relatedToEntity,
         direction: direction as "IN" | "OUT",
+        cardinality,
     });
 }
 

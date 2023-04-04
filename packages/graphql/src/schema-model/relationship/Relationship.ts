@@ -25,6 +25,8 @@ import type { Entity } from "../entity/Entity";
 
 export type RelationshipDirection = "IN" | "OUT";
 
+export type RelationshipCardinality = "1" | "*";
+
 export class Relationship {
     public readonly name: string;
     public readonly type: string;
@@ -32,6 +34,7 @@ export class Relationship {
     public readonly source: ConcreteEntity; // Origin field of relationship
     public readonly target: Entity;
     public readonly direction: RelationshipDirection;
+    public readonly cardinality: RelationshipCardinality; // Cardinality respect to the source
 
     /**Note: Required for now to infer the types without ResolveTree */
     public get connectionFieldTypename(): string {
@@ -50,6 +53,7 @@ export class Relationship {
         source,
         target,
         direction,
+        cardinality,
     }: {
         name: string;
         type: string;
@@ -57,12 +61,14 @@ export class Relationship {
         source: ConcreteEntity;
         target: Entity;
         direction: RelationshipDirection;
+        cardinality;
     }) {
         this.type = type;
         this.source = source;
         this.target = target;
         this.name = name;
         this.direction = direction;
+        this.cardinality = cardinality;
 
         for (const attribute of attributes) {
             this.addAttribute(attribute);
@@ -77,6 +83,7 @@ export class Relationship {
             source: this.source,
             target: this.target,
             direction: this.direction,
+            cardinality: this.cardinality,
         });
     }
 
