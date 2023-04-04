@@ -3,6 +3,7 @@ import { ConcreteEntity } from "../../../schema-model/entity/ConcreteEntity";
 import type { Entity } from "../../../schema-model/entity/Entity";
 import type { Neo4jGraphQLSchemaModel } from "../../../schema-model/Neo4jGraphQLSchemaModel";
 import type { GraphQLOptionsArg, GraphQLWhereArg } from "../../../types";
+import { Pagination } from "../ast/pagination/Pagination";
 import { QueryAST } from "../ast/QueryAST";
 import { FilterASTFactory } from "./FilterASTFactory";
 import { SelectionSetASTFactory } from "./SelectionSetASTFactory";
@@ -39,8 +40,22 @@ export class QueryASTFactory {
         if (options) {
             const sort = this.sortFactory.createSortFields(options, entity);
             ast.addSort(...sort);
+
+            const pagination = this.createPagination(options);
+            if (pagination) {
+                ast.addPagination(pagination);
+            }
         }
 
         return ast;
+    }
+
+    private createPagination(options: GraphQLOptionsArg): Pagination | undefined {
+        if (options.limit || options.offset) {
+            return new Pagination({
+                skip: options.offset,
+                limit: options.limit,
+            });
+        }
     }
 }

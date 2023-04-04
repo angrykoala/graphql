@@ -208,7 +208,7 @@ describe("Cypher sort tests", () => {
         expect(formatParams(result.params)).toMatchInlineSnapshot(`"{}"`);
     });
 
-    test.only("Sort with offset limit & with other variables", async () => {
+    test("Sort with offset limit & with other variables", async () => {
         const query = gql`
             query ($title: String, $offset: Int, $limit: Int) {
                 movies(

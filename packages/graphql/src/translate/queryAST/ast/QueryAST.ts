@@ -22,6 +22,7 @@ import type { ConcreteEntity } from "../../../schema-model/entity/ConcreteEntity
 import type { ProjectionField } from "../types";
 import { createNodeFromEntity } from "../utils";
 import type { Filter } from "./filters/Filter";
+import { Pagination } from "./pagination/Pagination";
 import type { SelectionSetField } from "./projection/SelectionSetField";
 import type { Sort } from "./sort/Sort";
 
@@ -31,6 +32,7 @@ export class QueryAST {
     private filters: Filter[] = [];
     private selectionSet: SelectionSetField[] = [];
     private sortFields: Sort[] = [];
+    private pagination: Pagination | undefined;
 
     constructor(entity: ConcreteEntity) {
         this.entity = entity;
@@ -46,6 +48,9 @@ export class QueryAST {
 
     public addSort(...sort: Sort[]): void {
         this.sortFields.push(...sort);
+    }
+    public addPagination(pagination: Pagination): void {
+        this.pagination = pagination;
     }
 
     public transpile(varName?: string): Cypher.Clause {
@@ -85,7 +90,16 @@ export class QueryAST {
 
     private createWithSortClause(node: Cypher.Node): Cypher.With {
         const orderByFields = this.sortFields.flatMap((f) => f.getSortFields(node));
-        return new Cypher.With("*").orderBy(...orderByFields);
+        const pagination = this.pagination ? this.pagination.getPagination() : undefined;
+        const withSort = new Cypher.With("*").orderBy(...orderByFields);
+        if (pagination?.skip) {
+            withSort.skip(pagination.skip);
+        }
+        if (pagination?.limit) {
+            withSort.limit(pagination.limit);
+        }
+
+        return withSort;
     }
 
     private getProjectionFields(node: Cypher.Node): ProjectionField[] {

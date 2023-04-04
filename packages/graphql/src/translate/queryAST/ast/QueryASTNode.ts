@@ -18,6 +18,7 @@
  */
 
 import type Cypher from "@neo4j/cypher-builder";
+import type { PaginationField } from "./pagination/Pagination";
 import type { SortField } from "./sort/Sort";
 
 export type ProjectionField = string | Record<string, Cypher.Expr>;
@@ -37,5 +38,9 @@ export abstract class QueryASTNode {
 
     public getSortFields(variable: Cypher.Variable): SortField[] {
         return [];
+    }
+
+    public getPagination(): PaginationField | undefined {
+        return undefined;
     }
 }
