@@ -22,7 +22,7 @@ import type { ConcreteEntity } from "../../../schema-model/entity/ConcreteEntity
 import type { ProjectionField } from "../types";
 import { createNodeFromEntity } from "../utils";
 import type { Filter } from "./filters/Filter";
-import { Pagination } from "./pagination/Pagination";
+import type { Pagination } from "./pagination/Pagination";
 import type { SelectionSetField } from "./projection/SelectionSetField";
 import type { Sort } from "./sort/Sort";
 

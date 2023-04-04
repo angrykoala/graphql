@@ -1,9 +1,10 @@
 import type { ConcreteEntity } from "../../../schema-model/entity/ConcreteEntity";
 import type { GraphQLOptionsArg } from "../../../types";
+import { Pagination } from "../ast/pagination/Pagination";
 import { PropertySort } from "../ast/sort/PropertySort";
 import type { Sort } from "../ast/sort/Sort";
 
-export class SortASTFactory {
+export class SortAndPaginationASTFactory {
     public createSortFields(options: GraphQLOptionsArg, entity: ConcreteEntity): Sort[] {
         return (options.sort || [])
             ?.flatMap((s) => Object.entries(s))
@@ -16,5 +17,14 @@ export class SortASTFactory {
                     attribute,
                 });
             });
+    }
+
+    public createPagination(options: GraphQLOptionsArg): Pagination | undefined {
+        if (options.limit || options.offset) {
+            return new Pagination({
+                skip: options.offset,
+                limit: options.limit,
+            });
+        }
     }
 }

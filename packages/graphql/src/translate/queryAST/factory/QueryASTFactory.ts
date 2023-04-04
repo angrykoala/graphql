@@ -3,23 +3,22 @@ import { ConcreteEntity } from "../../../schema-model/entity/ConcreteEntity";
 import type { Entity } from "../../../schema-model/entity/Entity";
 import type { Neo4jGraphQLSchemaModel } from "../../../schema-model/Neo4jGraphQLSchemaModel";
 import type { GraphQLOptionsArg, GraphQLWhereArg } from "../../../types";
-import { Pagination } from "../ast/pagination/Pagination";
 import { QueryAST } from "../ast/QueryAST";
 import { FilterASTFactory } from "./FilterASTFactory";
 import { SelectionSetASTFactory } from "./SelectionSetASTFactory";
-import { SortASTFactory } from "./SortASTFactory";
+import { SortAndPaginationASTFactory } from "./SortAndPaginationASTFactory";
 
 export class QueryASTFactory {
     private schemaModel: Neo4jGraphQLSchemaModel;
     private filterFactory: FilterASTFactory;
     private selectionSetFactory: SelectionSetASTFactory;
-    private sortFactory: SortASTFactory;
+    private sortAndPaginationFactory: SortAndPaginationASTFactory;
 
     constructor(schemaModel: Neo4jGraphQLSchemaModel) {
         this.schemaModel = schemaModel;
         this.filterFactory = new FilterASTFactory();
-        this.selectionSetFactory = new SelectionSetASTFactory(this.filterFactory);
-        this.sortFactory = new SortASTFactory();
+        this.sortAndPaginationFactory = new SortAndPaginationASTFactory();
+        this.selectionSetFactory = new SelectionSetASTFactory(this.filterFactory, this.sortAndPaginationFactory);
     }
 
     public createQueryAST(resolveTree: ResolveTree, entity: Entity): QueryAST {
@@ -38,24 +37,15 @@ export class QueryASTFactory {
         const options = resolveTree.args.options as GraphQLOptionsArg | undefined;
 
         if (options) {
-            const sort = this.sortFactory.createSortFields(options, entity);
+            const sort = this.sortAndPaginationFactory.createSortFields(options, entity);
             ast.addSort(...sort);
 
-            const pagination = this.createPagination(options);
+            const pagination = this.sortAndPaginationFactory.createPagination(options);
             if (pagination) {
                 ast.addPagination(pagination);
             }
         }
 
         return ast;
-    }
-
-    private createPagination(options: GraphQLOptionsArg): Pagination | undefined {
-        if (options.limit || options.offset) {
-            return new Pagination({
-                skip: options.offset,
-                limit: options.limit,
-            });
-        }
     }
 }

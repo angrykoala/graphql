@@ -4,7 +4,9 @@ import type { Relationship } from "../../../../schema-model/relationship/Relatio
 import type { ProjectionField } from "../../types";
 import { directionToCypher } from "../../utils";
 import type { Filter } from "../filters/Filter";
+import type { Pagination } from "../pagination/Pagination";
 import { QueryASTNode } from "../QueryASTNode";
+import type { Sort } from "../sort/Sort";
 import type { SelectionSetField } from "./SelectionSetField";
 
 export class RelationshipField extends QueryASTNode {
@@ -13,6 +15,8 @@ export class RelationshipField extends QueryASTNode {
     private directed: boolean;
     private selectionSet: SelectionSetField[] = [];
     private filters: Filter[] = [];
+    private sortFields: Sort[] = [];
+    private pagination: Pagination | undefined;
 
     private projectionVariable = new Cypher.Variable();
 
@@ -39,6 +43,13 @@ export class RelationshipField extends QueryASTNode {
 
     public getProjectionFields(_variable: Cypher.Variable): ProjectionField[] {
         return [{ [this.alias]: this.projectionVariable }];
+    }
+
+    public addSort(...sort: Sort[]): void {
+        this.sortFields.push(...sort);
+    }
+    public addPagination(pagination: Pagination): void {
+        this.pagination = pagination;
     }
 
     public getSubqueries(parentNode: Cypher.Node): Cypher.Clause[] {
@@ -75,15 +86,29 @@ export class RelationshipField extends QueryASTNode {
             projectionMap.set(field);
         }
 
-        // const mapIntermediateProjection = new Cypher.Variable();
         const mapIntermediateProjection = relatedNode; // NOTE: Reusing same node just to avoid breaking TCK on refactor
-        const withReturn = new Cypher.With([projectionMap, mapIntermediateProjection]).return([
-            Cypher.collect(mapIntermediateProjection),
-            this.projectionVariable,
-        ]);
+        const withClause = new Cypher.With([projectionMap, mapIntermediateProjection]);
+        if (this.sortFields.length > 0) {
+            this.addSortToClause(relatedNode, withClause);
+        }
+
+        const withReturn = withClause.return([Cypher.collect(mapIntermediateProjection), this.projectionVariable]);
 
         const nestedQuery = Cypher.concat(match, ...subqueries, withReturn);
 
         return [new Cypher.Call(nestedQuery).innerWith(parentNode)];
+    }
+
+    private addSortToClause(node: Cypher.Node, clause: Cypher.With | Cypher.Return): void {
+        const orderByFields = this.sortFields.flatMap((f) => f.getSortFields(node));
+        const pagination = this.pagination ? this.pagination.getPagination() : undefined;
+        clause.orderBy(...orderByFields);
+
+        if (pagination?.skip) {
+            clause.skip(pagination.skip);
+        }
+        if (pagination?.limit) {
+            clause.limit(pagination.limit);
+        }
     }
 }

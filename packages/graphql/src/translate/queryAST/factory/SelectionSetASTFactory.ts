@@ -20,7 +20,7 @@
 import type { ResolveTree } from "graphql-parse-resolve-info";
 import type { ConcreteEntity } from "../../../schema-model/entity/ConcreteEntity";
 import type { Relationship } from "../../../schema-model/relationship/Relationship";
-import type { ConnectionWhereArg, GraphQLWhereArg } from "../../../types";
+import type { ConnectionWhereArg, GraphQLOptionsArg, GraphQLWhereArg } from "../../../types";
 import { filterTruthy } from "../../../utils/utils";
 import { AttributeField } from "../ast/projection/AttributeField";
 import { ConnectionField } from "../ast/projection/connection/ConnectionField";
@@ -28,12 +28,15 @@ import { RelationshipField } from "../ast/projection/RelationshipField";
 import type { SelectionSetField } from "../ast/projection/SelectionSetField";
 import type { FilterASTFactory } from "./FilterASTFactory";
 import { parseSelectionSetField } from "./parsers/parse-selection-set-field";
+import type { SortAndPaginationASTFactory } from "./SortAndPaginationASTFactory";
 
 export class SelectionSetASTFactory {
     private filterFactory: FilterASTFactory;
+    private sortAndPaginationFactory: SortAndPaginationASTFactory;
 
-    constructor(filterFactor: FilterASTFactory) {
-        this.filterFactory = filterFactor;
+    constructor(filterFactory: FilterASTFactory, sortFactory: SortAndPaginationASTFactory) {
+        this.filterFactory = filterFactory;
+        this.sortAndPaginationFactory = sortFactory;
     }
 
     public createSelectionSetAST(
@@ -94,13 +97,27 @@ export class SelectionSetASTFactory {
 
         const relationshipFilters = this.filterFactory.createFilters(relationshipWhere, childEntity);
 
-        return new RelationshipField({
+        const relationshipField = new RelationshipField({
             relationship,
             alias,
             directed,
             selectionSetFields: filterTruthy(selectionSetFields),
             filters: relationshipFilters,
         });
+
+        const options = resolveTree.args.options as GraphQLOptionsArg | undefined;
+
+        if (options) {
+            const sort = this.sortAndPaginationFactory.createSortFields(options, childEntity);
+            relationshipField.addSort(...sort);
+
+            const pagination = this.sortAndPaginationFactory.createPagination(options);
+            if (pagination) {
+                relationshipField.addPagination(pagination);
+            }
+        }
+
+        return relationshipField;
     }
 
     private createConnectionSelectionSet({
