@@ -18,6 +18,7 @@
  */
 
 import type { ResolveTree } from "graphql-parse-resolve-info";
+import { Integer } from "neo4j-driver";
 import type { ConcreteEntity } from "../../../schema-model/entity/ConcreteEntity";
 import type { Relationship } from "../../../schema-model/relationship/Relationship";
 import type { ConnectionWhereArg, GraphQLOptionsArg, GraphQLWhereArg } from "../../../types";
@@ -172,7 +173,7 @@ export class SelectionSetASTFactory {
             relationship,
         });
 
-        return new ConnectionField({
+        const connectionField = new ConnectionField({
             relationship,
             alias,
             directed,
@@ -183,6 +184,33 @@ export class SelectionSetASTFactory {
             // nodeFilter: relatedNodeFilters,
             // relationshipFilter: edgeFilter,
         });
+
+        const first = resolveTree.args.first as number | Integer | undefined;
+        if (first) {
+            const pagination = this.sortAndPaginationFactory.createPagination({
+                limit: first,
+            });
+            if (pagination) {
+                connectionField.addPagination(pagination);
+            }
+        }
+
+        // const options: GraphQLOptionsArg = {
+        //     first: resolveTree.args,
+        // };
+        // resolveTree.args.options as GraphQLOptionsArg | undefined;
+        // console.log(options);
+        // if (options) {
+        //     const sort = this.sortAndPaginationFactory.createSortFields(options, childEntity);
+        //     relationshipField.addSort(...sort);
+
+        //     const pagination = this.sortAndPaginationFactory.createPagination(options);
+        //     if (pagination) {
+        //         relationshipField.addPagination(pagination);
+        //     }
+        // }
+
+        return connectionField;
     }
 
     private createEdgeSelectionSet({

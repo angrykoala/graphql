@@ -6,7 +6,9 @@ import type { ProjectionField } from "../../../types";
 import { directionToCypher } from "../../../utils";
 import type { ConnectionEdgeFilter } from "../../filters/connection/ConnectionEdgeFilter";
 import type { ConnectionNodeFilter } from "../../filters/connection/ConnectionNodeFilter";
+import { Pagination, PaginationField } from "../../pagination/Pagination";
 import { QueryASTNode } from "../../QueryASTNode";
+import { Sort } from "../../sort/Sort";
 import type { AttributeField } from "../AttributeField";
 import type { SelectionSetField } from "../SelectionSetField";
 
@@ -20,6 +22,9 @@ export class ConnectionField extends QueryASTNode {
 
     private targetNodeFilters: ConnectionNodeFilter[] = [];
     private relationshipFilters: ConnectionEdgeFilter[] = [];
+
+    private sortFields: Sort[] = [];
+    private pagination: Pagination | undefined;
 
     private projectionVariable = new Cypher.Variable();
 
@@ -48,6 +53,13 @@ export class ConnectionField extends QueryASTNode {
         this.edgeSelectionSet = edgeSelectionSet;
         this.targetNodeFilters = targetNodeFilters;
         this.relationshipFilters = targetEdgeFilters;
+    }
+
+    public addSort(...sort: Sort[]): void {
+        this.sortFields.push(...sort);
+    }
+    public addPagination(pagination: Pagination): void {
+        this.pagination = pagination;
     }
 
     public getProjectionFields(_variable: Cypher.Variable): ProjectionField[] {
@@ -116,12 +128,41 @@ export class ConnectionField extends QueryASTNode {
 
         const projectionWith = new Cypher.With([edgeProjection, edgeVar])
             .with([Cypher.collect(edgeVar), edgesVar])
-            .with(edgesVar, [Cypher.size(edgesVar), totalCountVar])
-            .return([new Cypher.Map({ edges: edgesVar, totalCount: totalCountVar }), this.projectionVariable]);
+            .with(edgesVar, [Cypher.size(edgesVar), totalCountVar]);
+
+        let sortSubquery: Cypher.With | undefined;
+        if (this.pagination) {
+            const paginationField = this.pagination.getPagination();
+            if (paginationField) {
+                sortSubquery = this.getPaginationSubquery(edgesVar, paginationField);
+                sortSubquery.addColumns(totalCountVar);
+            }
+        }
+
+        const returnClause = new Cypher.Return([
+            new Cypher.Map({ edges: edgesVar, totalCount: totalCountVar }),
+            this.projectionVariable,
+        ]);
         // TODO: nested Subqueries
         return [
-            new Cypher.Call(Cypher.concat(match, ...nodeSelectionSetSubqueries, projectionWith)).innerWith(parentNode),
+            new Cypher.Call(
+                Cypher.concat(match, ...nodeSelectionSetSubqueries, projectionWith, sortSubquery, returnClause)
+            ).innerWith(parentNode),
         ];
+    }
+
+    private getPaginationSubquery(edgesVar: Cypher.Variable, paginationField: PaginationField): Cypher.With {
+        const edgeVar = new Cypher.NamedVariable("edge");
+
+        const subquery = new Cypher.Unwind([edgesVar, edgeVar]).with(edgeVar);
+        if (paginationField.limit) {
+            subquery.limit(paginationField.limit);
+        }
+
+        const returnVar = new Cypher.Variable();
+        subquery.return([Cypher.collect(edgeVar), returnVar]);
+
+        return new Cypher.Call(subquery).innerWith(edgesVar).with([returnVar, edgesVar]);
     }
 
     private addFieldsToMap(

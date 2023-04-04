@@ -1,5 +1,4 @@
 import type { LogicalOperators, WhereOperator } from "../../operators";
-import type { ConnectionWhereArg } from "../../../../types";
 
 export type WhereRegexGroups = {
     fieldName: string;
