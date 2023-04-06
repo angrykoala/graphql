@@ -18,15 +18,18 @@
  */
 
 import type { ResolveTree } from "graphql-parse-resolve-info";
-import { Integer } from "neo4j-driver";
+import type { Integer } from "neo4j-driver";
 import type { ConcreteEntity } from "../../../schema-model/entity/ConcreteEntity";
 import type { Relationship } from "../../../schema-model/relationship/Relationship";
 import type { ConnectionWhereArg, GraphQLOptionsArg, GraphQLWhereArg } from "../../../types";
 import { filterTruthy } from "../../../utils/utils";
+import { AggregationSelectionSet } from "../ast/projection/aggregations/AggregationSelectionSet";
+import type { AggregationField } from "../ast/projection/aggregations/fields/AggregationField";
 import { AttributeField } from "../ast/projection/AttributeField";
 import { ConnectionField } from "../ast/projection/connection/ConnectionField";
 import { RelationshipField } from "../ast/projection/RelationshipField";
 import type { SelectionSetField } from "../ast/projection/SelectionSetField";
+import { AggregationFieldFactory } from "./AggregationFieldFactory";
 import type { FilterASTFactory } from "./FilterASTFactory";
 import { parseSelectionSetField } from "./parsers/parse-selection-set-field";
 import type { SortAndPaginationASTFactory } from "./SortAndPaginationASTFactory";
@@ -34,10 +37,12 @@ import type { SortAndPaginationASTFactory } from "./SortAndPaginationASTFactory"
 export class SelectionSetASTFactory {
     private filterFactory: FilterASTFactory;
     private sortAndPaginationFactory: SortAndPaginationASTFactory;
+    private aggregationFieldFactory: AggregationFieldFactory;
 
     constructor(filterFactory: FilterASTFactory, sortFactory: SortAndPaginationASTFactory) {
         this.filterFactory = filterFactory;
         this.sortAndPaginationFactory = sortFactory;
+        this.aggregationFieldFactory = new AggregationFieldFactory();
     }
 
     public createSelectionSetAST(
@@ -52,12 +57,19 @@ export class SelectionSetASTFactory {
     }
 
     private createSelectionSetField(value: ResolveTree, entity: ConcreteEntity): SelectionSetField | undefined {
-        // TODO: relationship projections
-        const { fieldName, isConnection } = parseSelectionSetField(value.name);
+        const { fieldName, isConnection, isAggregation } = parseSelectionSetField(value.name);
         const relationship = entity.findRelationship(fieldName);
         if (isConnection) {
             if (!relationship) throw new Error(`Relationship not found for connection ${fieldName}`);
             return this.createConnectionSelectionSet({
+                relationship,
+                resolveTree: value,
+            });
+        }
+
+        if (isAggregation) {
+            if (!relationship) throw new Error(`Relationship not found for aggregation ${fieldName}`);
+            return this.createAggregationSelectionSet({
                 relationship,
                 resolveTree: value,
             });
@@ -211,6 +223,64 @@ export class SelectionSetASTFactory {
         // }
 
         return connectionField;
+    }
+
+    private createAggregationSelectionSet({
+        resolveTree,
+        relationship,
+    }: {
+        resolveTree: ResolveTree;
+        relationship: Relationship;
+    }): AggregationSelectionSet {
+        const childEntity = relationship.target as ConcreteEntity;
+        const alias = resolveTree.alias;
+        const directed = Boolean(resolveTree.args.directed);
+        // const relationshipWhere: GraphQLWhereArg = (resolveTree.args.where || {}) as GraphQLWhereArg;
+
+        const resolveTreeFields = { ...resolveTree.fieldsByTypeName[relationship.aggregationFieldTypename] };
+        const aggregationSelectionSet = new AggregationSelectionSet({
+            relationship,
+            alias,
+            directed,
+        });
+
+        if (resolveTreeFields.count) {
+            const countField = this.aggregationFieldFactory.generateCountField(resolveTreeFields.count);
+            aggregationSelectionSet.addField(countField);
+        }
+
+        if (resolveTreeFields.node) {
+            const nodeTreeFields = {
+                ...resolveTreeFields.node.fieldsByTypeName[relationship.aggregationNodeFieldTypename],
+            };
+            for (const value of Object.values(nodeTreeFields)) {
+                const attribute = childEntity.findAttribute(value.name);
+                if (!attribute) throw new Error(`Attribute ${value.name} not found in ${childEntity.name}`);
+                const field = this.aggregationFieldFactory.generateAggregationAttributeSelectionSet(attribute, value);
+                aggregationSelectionSet.addNodeField(field);
+            }
+        }
+
+        // const fields = filterTruthy(
+        //     Object.entries(resolveTreeFields).map(([key, value]): AggregationField | undefined => {
+        //         return undefined;
+        //     })
+        // );
+
+        return aggregationSelectionSet;
+        // const selectionSetFields = Object.entries(resolveTreeFields).map(([_, value]) => {
+        //     return this.createSelectionSetField(value, childEntity as any);
+        // });
+
+        // const relationshipFilters = this.filterFactory.createFilters(relationshipWhere, childEntity);
+
+        // const relationshipField = new RelationshipField({
+        //     relationship,
+        //     alias,
+        //     directed,
+        //     selectionSetFields: filterTruthy(selectionSetFields),
+        //     filters: relationshipFilters,
+        // });
     }
 
     private createEdgeSelectionSet({

@@ -32,7 +32,6 @@ import { createMatchClause } from "./translate-top-level-match";
 
 function testQueryAST({ context, node }: { context: Context; node: Node }): Cypher.CypherResult {
     const { resolveTree } = context;
-    // console.log(JSON.stringify(resolveTree, undefined, 4));
     const factory = new QueryASTFactory(context.schemaModel);
     const entity = context.schemaModel.getEntity(node.name);
     const queryAST = factory.createQueryAST(resolveTree, entity);

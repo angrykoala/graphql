@@ -42,6 +42,16 @@ export class Relationship {
     }
 
     /**Note: Required for now to infer the types without ResolveTree */
+    public get aggregationFieldTypename(): string {
+        return `${this.source.name}${this.target.name}${upperFirst(this.name)}AggregationSelection`;
+    }
+
+    /**Note: Required for now to infer the types without ResolveTree */
+    public get aggregationNodeFieldTypename(): string {
+        return `${this.source.name}${this.target.name}${upperFirst(this.name)}NodeAggregateSelection`;
+    }
+
+    /**Note: Required for now to infer the types without ResolveTree */
     public get relationshipFieldTypename(): string {
         return `${this.source.name}${upperFirst(this.name)}Relationship`;
     }
