@@ -24,7 +24,8 @@ import type { Relationship } from "../../../schema-model/relationship/Relationsh
 import type { ConnectionWhereArg, GraphQLOptionsArg, GraphQLWhereArg } from "../../../types";
 import { filterTruthy } from "../../../utils/utils";
 import { AggregationSelectionSet } from "../ast/projection/aggregations/AggregationSelectionSet";
-import type { AggregationField } from "../ast/projection/aggregations/fields/AggregationField";
+import { EdgeAggregationSelectionSet } from "../ast/projection/aggregations/EdgeAggregationSelectionSet";
+import { NodeAggregationSelectionSet } from "../ast/projection/aggregations/NodeAggregationSelectionSet";
 import { AttributeField } from "../ast/projection/AttributeField";
 import { ConnectionField } from "../ast/projection/connection/ConnectionField";
 import { RelationshipField } from "../ast/projection/RelationshipField";
@@ -245,7 +246,11 @@ export class SelectionSetASTFactory {
         });
 
         if (resolveTreeFields.count) {
-            const countField = this.aggregationFieldFactory.generateCountField(resolveTreeFields.count);
+            const countField = this.aggregationFieldFactory.generateCountField(
+                resolveTreeFields.count,
+                directed,
+                relationship
+            );
             aggregationSelectionSet.addField(countField);
         }
 
@@ -253,12 +258,33 @@ export class SelectionSetASTFactory {
             const nodeTreeFields = {
                 ...resolveTreeFields.node.fieldsByTypeName[relationship.aggregationNodeFieldTypename],
             };
+
+            const aggregationNodeSelectionSet = new NodeAggregationSelectionSet(relationship, directed);
             for (const value of Object.values(nodeTreeFields)) {
                 const attribute = childEntity.findAttribute(value.name);
                 if (!attribute) throw new Error(`Attribute ${value.name} not found in ${childEntity.name}`);
                 const field = this.aggregationFieldFactory.generateAggregationAttributeSelectionSet(attribute, value);
-                aggregationSelectionSet.addNodeField(field);
+                aggregationNodeSelectionSet.addField(field);
             }
+
+            aggregationSelectionSet.addNodeSelectionSet(aggregationNodeSelectionSet);
+        }
+
+        if (resolveTreeFields.edge) {
+            const edgeTreeFields = {
+                ...resolveTreeFields.edge.fieldsByTypeName[relationship.aggregationEdgeFieldTypename],
+            };
+
+            const aggregationEdgeSelectionSet = new EdgeAggregationSelectionSet(relationship, directed);
+            for (const value of Object.values(edgeTreeFields)) {
+                console.log("edge", value);
+                const attribute = relationship.findAttribute(value.name);
+                if (!attribute) throw new Error(`Attribute ${value.name} not found in ${relationship.name}`);
+                const field = this.aggregationFieldFactory.generateAggregationAttributeSelectionSet(attribute, value);
+                aggregationEdgeSelectionSet.addField(field);
+            }
+
+            aggregationSelectionSet.addEdgeSelectionSet(aggregationEdgeSelectionSet);
         }
 
         // const fields = filterTruthy(

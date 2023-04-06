@@ -17,36 +17,46 @@
  * limitations under the License.
  */
 
-import Cypher from "@neo4j/cypher-builder";
+import Cypher, { nodes } from "@neo4j/cypher-builder";
 import type { Node, Clause } from "@neo4j/cypher-builder/src";
 import type { ConcreteEntity } from "../../../../../schema-model/entity/ConcreteEntity";
 import type { Relationship } from "../../../../../schema-model/relationship/Relationship";
-import { directionToCypher } from "../../../utils";
 import { QueryASTNode } from "../../QueryASTNode";
 import type { ProjectionField } from "../../QueryASTNode";
-import type { AggregationField, AggregationNodeField } from "./fields/AggregationField";
+import type { CountField } from "./fields/CountField";
+import type { EdgeAggregationSelectionSet } from "./EdgeAggregationSelectionSet";
+import type { NodeAggregationSelectionSet } from "./NodeAggregationSelectionSet";
+import { directionToCypher } from "../../../utils";
+
+type AggregationTopLevelFields = CountField;
 
 export class AggregationSelectionSet extends QueryASTNode {
     private relationship: Relationship;
     private alias: string;
     private directed: boolean;
 
-    private fields: AggregationField[] = [];
-    private nodeFields: AggregationField[] = [];
+    private nodeFields: NodeAggregationSelectionSet | undefined;
+    private edgeFields: EdgeAggregationSelectionSet | undefined;
+    private topLevelFields: Array<CountField> = [];
 
     constructor({ relationship, alias, directed }: { relationship: Relationship; alias: string; directed: boolean }) {
         super();
         this.relationship = relationship;
         this.alias = alias;
         this.directed = directed;
+        // this.nodeSelectionSet = new NodeAggregationSelectionSet(relationship, directed);
     }
 
-    public addField(...fields: AggregationField[]): void {
-        this.fields.push(...fields);
+    public addField(...fields: AggregationTopLevelFields[]): void {
+        this.topLevelFields.push(...fields);
     }
 
-    public addNodeField(...fields: AggregationNodeField[]): void {
-        this.nodeFields.push(...fields);
+    public addNodeSelectionSet(node: NodeAggregationSelectionSet): void {
+        this.nodeFields = node;
+    }
+
+    public addEdgeSelectionSet(edge: EdgeAggregationSelectionSet): void {
+        this.edgeFields = edge;
     }
 
     public getSubqueries(node: Node): Clause[] {
@@ -67,9 +77,12 @@ export class AggregationSelectionSet extends QueryASTNode {
             .withDirection(directionToCypher(this.relationship.direction, this.directed))
             .to(relatedNode);
 
-        const subClauses = [...this.fields, ...this.nodeFields].flatMap((f) => f.getSubqueries(relatedNode));
+        const nodeSubClauses = this.nodeFields?.getSubqueries(relatedNode) || [];
+        const edgeSubClauses = this.edgeFields?.getSubqueries(relationshipVar) || [];
+        const subClauses = this.topLevelFields.flatMap((f) => f.getSubqueries(relatedNode));
 
-        return subClauses.map((clause) => {
+        // This logic should go on nested nodes, it is here simply for tck compatibility
+        return [...subClauses, ...nodeSubClauses, ...edgeSubClauses].map((clause) => {
             const match = new Cypher.Match(pattern);
             const innerClause = Cypher.concat(match, clause);
             return new Cypher.Call(innerClause).innerWith(node);
@@ -77,20 +90,13 @@ export class AggregationSelectionSet extends QueryASTNode {
     }
 
     public getProjectionFields(variable: Cypher.Variable): ProjectionField[] {
-        const fieldProjections = this.fields.flatMap((f) => f.getProjectionFields(variable));
-        const nodeFieldProjections = this.nodeFields.flatMap((f) => f.getProjectionFields(variable));
+        const nodeProjection = this.nodeFields?.getProjectionFields(variable) || [];
+        const edgeProjection = this.edgeFields?.getProjectionFields(variable) || [];
+        const fieldProjections = this.topLevelFields.flatMap((f) => f.getProjectionFields(variable));
 
         const projectionMap = new Cypher.Map();
-        for (const field of fieldProjections) {
+        for (const field of [...fieldProjections, ...nodeProjection, ...edgeProjection]) {
             projectionMap.set(field);
-        }
-
-        if (nodeFieldProjections.length > 0) {
-            const nodeProjectionMap = new Cypher.Map();
-            for (const field of nodeFieldProjections) {
-                nodeProjectionMap.set(field);
-            }
-            projectionMap.set("node", nodeProjectionMap);
         }
 
         return [

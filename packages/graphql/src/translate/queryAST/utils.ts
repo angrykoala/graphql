@@ -31,7 +31,7 @@ export function createNodeFromEntity(entity: ConcreteEntity, name?: string): Cyp
 }
 
 export function getPropertyFromAttribute(variable: Cypher.Variable, attribute: Attribute): Cypher.Property {
-    return variable.property(attribute.name);
+    return variable.property(attribute.getDBName());
 }
 
 export function getOrThrow<T>(e: T | undefined, message?: string): T {

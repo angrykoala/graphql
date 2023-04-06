@@ -1,15 +1,17 @@
-import { min } from "@neo4j/cypher-builder";
 import type { ResolveTree } from "graphql-parse-resolve-info";
 import type { Attribute } from "../../../schema-model/attribute/Attribute";
+import type { Relationship } from "../../../schema-model/relationship/Relationship";
+import { CountField } from "../ast/projection/aggregations/fields/CountField";
 import { AggregationDatetimeSelectionSet } from "../ast/projection/aggregations/fields/AggregationDatetimeSelectionSet";
 import { AggregationNumberSelectionSet } from "../ast/projection/aggregations/fields/AggregationNumberSelectionSet";
 import { AggregationStringSelectionSet } from "../ast/projection/aggregations/fields/AggregationStringSelectionSet";
-import { CountField } from "../ast/projection/aggregations/fields/CountField";
 
 export class AggregationFieldFactory {
-    public generateCountField(resolveTree: ResolveTree): CountField {
+    public generateCountField(resolveTree: ResolveTree, directed: boolean, relationship: Relationship): CountField {
         return new CountField({
             alias: resolveTree.alias,
+            directed,
+            relationship,
         });
     }
 

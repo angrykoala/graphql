@@ -32,7 +32,7 @@ export abstract class QueryASTNode {
         return [];
     }
 
-    public getSubqueries(node: Cypher.Node): Cypher.Clause[] {
+    public getSubqueries(variable: Cypher.Variable): Cypher.Clause[] {
         return [];
     }
 

@@ -1,13 +1,13 @@
 import Cypher from "@neo4j/cypher-builder";
 import type { Attribute } from "../../../../../../schema-model/attribute/Attribute";
-import type { ProjectionField } from "../../../QueryASTNode";
-import { QueryASTNode } from "../../../QueryASTNode";
+import { getPropertyFromAttribute } from "../../../../utils";
+import { AggregationAttributeField } from "./AggregationAttributeField";
 
 type AggregationStringField = {
     alias: string;
 };
 
-export class AggregationStringSelectionSet extends QueryASTNode {
+export class AggregationStringSelectionSet extends AggregationAttributeField {
     private longest: AggregationStringField | undefined;
     private shortest: AggregationStringField | undefined;
     private attribute: Attribute;
@@ -34,7 +34,7 @@ export class AggregationStringSelectionSet extends QueryASTNode {
     }
 
     public getSubqueries(node: Cypher.Node): Cypher.Clause[] {
-        const property = node.property(this.attribute.name);
+        const property = getPropertyFromAttribute(node, this.attribute);
         const listVar = new Cypher.NamedVariable("list");
 
         const returnMap = new Cypher.Map({
@@ -50,7 +50,7 @@ export class AggregationStringSelectionSet extends QueryASTNode {
         ];
     }
 
-    public getProjectionFields(variable: Cypher.Variable): ProjectionField[] {
+    public getProjectionFields(variable: Cypher.Variable): Record<string, Cypher.Expr>[] {
         return [
             {
                 [this.alias]: this.stringAggregationVar,

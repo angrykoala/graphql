@@ -52,6 +52,11 @@ export class Relationship {
     }
 
     /**Note: Required for now to infer the types without ResolveTree */
+    public get aggregationEdgeFieldTypename(): string {
+        return `${this.source.name}${this.target.name}${upperFirst(this.name)}EdgeAggregateSelection`;
+    }
+
+    /**Note: Required for now to infer the types without ResolveTree */
     public get relationshipFieldTypename(): string {
         return `${this.source.name}${upperFirst(this.name)}Relationship`;
     }

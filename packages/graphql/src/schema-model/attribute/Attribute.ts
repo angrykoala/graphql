@@ -72,6 +72,13 @@ export class Attribute {
         });
     }
 
+    public getDBName() {
+        if (this.annotations.alias) {
+            return this.annotations.alias.property;
+        }
+        return this.name;
+    }
+
     private addAnnotation(annotation: Annotation): void {
         const annotationKey = annotationToKey(annotation);
         if (this.annotations[annotationKey]) {

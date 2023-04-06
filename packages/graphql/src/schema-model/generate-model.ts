@@ -33,6 +33,7 @@ import { Attribute, AttributeType } from "./attribute/Attribute";
 import { CompositeEntity } from "./entity/CompositeEntity";
 import { ConcreteEntity } from "./entity/ConcreteEntity";
 import { Neo4jGraphQLSchemaModel } from "./Neo4jGraphQLSchemaModel";
+import { parseAliasAnnotation } from "./parser/alias-annotation";
 import { parseAuthorizationAnnotation } from "./parser/authorization-annotation";
 import { parseCypherAnnotation } from "./parser/cypher-annotation";
 import { parseArguments } from "./parser/utils";
@@ -272,6 +273,8 @@ function createFieldAnnotations(directives: readonly DirectiveNode[]): Annotatio
                     return parseCypherAnnotation(directive);
                 case "authorization":
                     return parseAuthorizationAnnotation(directive);
+                case "alias":
+                    return parseAliasAnnotation(directive);
                 default:
                     return undefined;
             }

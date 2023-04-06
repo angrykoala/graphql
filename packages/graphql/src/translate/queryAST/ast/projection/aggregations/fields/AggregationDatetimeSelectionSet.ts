@@ -1,9 +1,10 @@
 import Cypher from "@neo4j/cypher-builder";
 import type { Attribute } from "../../../../../../schema-model/attribute/Attribute";
+import { getPropertyFromAttribute } from "../../../../utils";
 import type { ProjectionField } from "../../../QueryASTNode";
-import { QueryASTNode } from "../../../QueryASTNode";
+import { AggregationAttributeField } from "./AggregationAttributeField";
 
-export class AggregationDatetimeSelectionSet extends QueryASTNode {
+export class AggregationDatetimeSelectionSet extends AggregationAttributeField {
     private attribute: Attribute;
     private alias: string;
 
@@ -18,7 +19,8 @@ export class AggregationDatetimeSelectionSet extends QueryASTNode {
     }
 
     public getSubqueries(node: Cypher.Node): Cypher.Clause[] {
-        const property = node.property(this.attribute.name);
+        const property = getPropertyFromAttribute(node, this.attribute);
+
         const returnMap = new Cypher.Map({
             min: this.convertToDate(Cypher.min(property)),
             max: this.convertToDate(Cypher.max(property)),
@@ -27,7 +29,7 @@ export class AggregationDatetimeSelectionSet extends QueryASTNode {
         return [new Cypher.Return([returnMap, this.stringAggregationVar])];
     }
 
-    public getProjectionFields(variable: Cypher.Variable): ProjectionField[] {
+    public getProjectionFields(variable: Cypher.Variable): Record<string, Cypher.Expr>[] {
         return [
             {
                 [this.alias]: this.stringAggregationVar,
