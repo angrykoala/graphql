@@ -1,7 +1,7 @@
 import Cypher from "@neo4j/cypher-builder";
-import { Node, Clause } from "@neo4j/cypher-builder/src";
-import { Attribute } from "../../../../../../schema-model/attribute/Attribute";
-import { ProjectionField, QueryASTNode } from "../../../QueryASTNode";
+import type { Attribute } from "../../../../../../schema-model/attribute/Attribute";
+import type { ProjectionField } from "../../../QueryASTNode";
+import { QueryASTNode } from "../../../QueryASTNode";
 
 type AggregationStringField = {
     alias: string;
@@ -33,7 +33,7 @@ export class AggregationStringSelectionSet extends QueryASTNode {
         this.alias = alias;
     }
 
-    public getSubqueries(node: Node): Clause[] {
+    public getSubqueries(node: Cypher.Node): Cypher.Clause[] {
         const property = node.property(this.attribute.name);
         const listVar = new Cypher.NamedVariable("list");
 

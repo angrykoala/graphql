@@ -81,16 +81,17 @@ export class AggregationSelectionSet extends QueryASTNode {
         const nodeFieldProjections = this.nodeFields.flatMap((f) => f.getProjectionFields(variable));
 
         const projectionMap = new Cypher.Map();
-        const nodeProjectionMap = new Cypher.Map();
         for (const field of fieldProjections) {
             projectionMap.set(field);
         }
 
-        for (const field of nodeFieldProjections) {
-            nodeProjectionMap.set(field);
+        if (nodeFieldProjections.length > 0) {
+            const nodeProjectionMap = new Cypher.Map();
+            for (const field of nodeFieldProjections) {
+                nodeProjectionMap.set(field);
+            }
+            projectionMap.set("node", nodeProjectionMap);
         }
-
-        projectionMap.set("node", nodeProjectionMap);
 
         return [
             {

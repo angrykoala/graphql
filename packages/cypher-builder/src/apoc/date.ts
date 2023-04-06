@@ -19,18 +19,13 @@
 
 import Cypher from "..";
 import { CypherFunction } from "../expressions/functions/CypherFunctions";
-import type { PropertyRef } from "../references/PropertyRef";
-import type { Variable } from "../references/Variable";
+import type { Expr } from "../types";
 
 /**
  * @group Expressions
  * @category Cypher Functions
  */
-export function convertFormat(
-    temporalParam: Variable | PropertyRef,
-    currentFormat: string,
-    convertTo = "yyyy-MM-dd"
-): CypherFunction {
+export function convertFormat(temporalParam: Expr, currentFormat: string, convertTo = "yyyy-MM-dd"): CypherFunction {
     return new CypherFunction("apoc.date.convertFormat", [
         Cypher.toString(temporalParam),
         new Cypher.Literal(currentFormat),
