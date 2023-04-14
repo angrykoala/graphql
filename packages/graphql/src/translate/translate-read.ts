@@ -51,10 +51,14 @@ export function translateRead(
     },
     varName = "this"
 ): Cypher.CypherResult {
-    if (!isRootConnectionField) {
+    const { resolveTree } = context;
+    const fulltextInput = (resolveTree.args.fulltext || {}) as Record<string, { phrase: string }>;
+    const hasFulltext = Boolean(Object.entries(fulltextInput).length || context.fulltextIndex);
+
+    if (!isRootConnectionField && !hasFulltext && !node.auth) {
         return testQueryAST({ context, node });
     }
-    const { resolveTree } = context;
+
     const matchNode = new Cypher.NamedNode(varName, { labels: node.getLabels(context) });
 
     const cypherFieldAliasMap: CypherFieldReferenceMap = {};

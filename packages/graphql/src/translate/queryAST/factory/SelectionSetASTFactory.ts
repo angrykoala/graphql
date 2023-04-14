@@ -19,6 +19,7 @@
 
 import type { ResolveTree } from "graphql-parse-resolve-info";
 import type { Integer } from "neo4j-driver";
+import { AttributeType } from "../../../schema-model/attribute/Attribute";
 import type { ConcreteEntity } from "../../../schema-model/entity/ConcreteEntity";
 import type { Relationship } from "../../../schema-model/relationship/Relationship";
 import type { ConnectionWhereArg, GraphQLOptionsArg, GraphQLWhereArg } from "../../../types";
@@ -34,6 +35,7 @@ import { AggregationFieldFactory } from "./AggregationFieldFactory";
 import type { FilterASTFactory } from "./FilterASTFactory";
 import { parseSelectionSetField } from "./parsers/parse-selection-set-field";
 import type { SortAndPaginationASTFactory } from "./SortAndPaginationASTFactory";
+import { PointAttributeField } from "../ast/projection/PointAttributeField";
 
 export class SelectionSetASTFactory {
     private filterFactory: FilterASTFactory;
@@ -85,6 +87,16 @@ export class SelectionSetASTFactory {
 
         const attribute = entity.findAttribute(fieldName);
         if (!attribute) throw new Error(`no attribute ${fieldName}`);
+
+        if (attribute.type === AttributeType.Point) {
+            const { crs } = value.fieldsByTypeName[attribute.type];
+            return new PointAttributeField({
+                attribute,
+                alias: value.alias,
+                crs: Boolean(crs),
+            });
+        }
+
         return new AttributeField({
             attribute,
             alias: value.alias,

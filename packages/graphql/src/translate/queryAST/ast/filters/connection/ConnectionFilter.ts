@@ -4,14 +4,13 @@ import type { Relationship } from "../../../../../schema-model/relationship/Rela
 import type { RelationshipWhereOperator } from "../../../../where/types";
 import { directionToCypher } from "../../../utils";
 import { QueryASTNode } from "../../QueryASTNode";
-import type { LogicalFilter } from "../LogicalFilter";
-import type { PropertyFilter } from "../PropertyFilter";
+import type { ConnectionEdgeFilter } from "./ConnectionEdgeFilter";
 import type { ConnectionNodeFilter } from "./ConnectionNodeFilter";
 
 export class ConnectionFilter extends QueryASTNode {
     private targetNodeFilters: ConnectionNodeFilter[] = [];
 
-    private relationshipFilters: Array<LogicalFilter | PropertyFilter> = [];
+    private relationshipFilters: ConnectionEdgeFilter[] = [];
 
     private relationship: Relationship;
     private operator: RelationshipWhereOperator;

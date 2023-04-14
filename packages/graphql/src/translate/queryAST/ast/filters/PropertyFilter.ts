@@ -45,6 +45,12 @@ export class PropertyFilter extends QueryASTNode {
                 param: new Cypher.Param(this.comparisonValue),
                 attribute: this.attribute,
             });
+        } else if (this.attribute.type === AttributeType.Duration && this.operator) {
+            baseOperation = this.createDurationOperation({
+                operator: this.operator,
+                property: nodeProperty,
+                param: new Cypher.Param(this.comparisonValue),
+            });
         } else {
             baseOperation = this.createBaseOperation({
                 operator: this.operator || "EQ",
@@ -76,7 +82,7 @@ export class PropertyFilter extends QueryASTNode {
     }: {
         operator: WhereOperator | "EQ";
         property: Cypher.Expr;
-        param: Cypher.Param;
+        param: Cypher.Expr;
     }): Cypher.ComparisonOp {
         switch (operator) {
             case "LT":
@@ -149,6 +155,25 @@ export class PropertyFilter extends QueryASTNode {
             default:
                 throw new Error(`Invalid operator ${operator}`);
         }
+    }
+
+    private createDurationOperation({
+        operator,
+        property,
+        param,
+    }: {
+        operator: WhereOperator | "EQ";
+        property: Cypher.Expr;
+        param: Cypher.Expr;
+    }) {
+        const variable = Cypher.plus(Cypher.datetime(), param);
+        const propertyRef = Cypher.plus(Cypher.datetime(), property);
+
+        return this.createBaseOperation({
+            operator,
+            property: propertyRef,
+            param: variable,
+        });
     }
 
     private createPointListComprehension(param: Cypher.Param): Cypher.ListComprehension {
